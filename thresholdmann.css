@@ -1,0 +1,43 @@
+body {
+    background:#eee;
+}
+.cpoint {
+    position: absolute;
+    display:block;
+    width:0.5rem;
+    height:0.5rem;
+    background: #444;
+    border-radius:0.5rem;
+    transform: translate(-50%,-50%);
+}
+.cpoint:hover {
+    background: #000;
+    width:0.75rem;
+    height:0.75rem;
+    border-radius:0.75rem;
+}
+.cpoint.selected {
+    position: absolute;
+    display:block;
+    width:0.75rem;
+    height:0.75rem;
+    border-radius:0.75rem;
+    background: #000;
+    transform: translate(-50%,-50%);
+}
+table {
+    border-spacing:0;
+}
+td {
+    padding: 5px;
+}
+tr.selected {
+    background: #ddd;
+}
+
+#tools,
+#overlay,
+#saveMask,
+#saveControlPoints {
+    display: none;
+}
