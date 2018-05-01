@@ -69,6 +69,36 @@ function displayControlPoints() {
     }
 }
 
+function thresholdJob() {
+    const worker = new Worker("thresholdmann-worker.js");
+    worker.onmessage = function(e) {
+        var msg=e.data.msg;
+        switch(msg) {
+            case 'success':
+                console.log("Worker finished");
+                var data=e.data.mask;
+                saveNifti(data);
+                $('#progress').text('Done');
+                setTimeout( ()=>{$('#progress').text('')}, 2000);
+                break;
+            case 'progress':
+                const v = e.data.value.split(',').map( (x) => parseInt(x) );
+                $('#progress').text(`${v[0]} out of ${v[1]}`);
+            default:
+                console.log("wrkr: "+e.data.msg);
+        }
+    }
+    console.log("Start worker");
+    worker.postMessage({
+        cmd:"start",
+        mri: mv.mri.data,
+        dim: mv.mri.dim,
+        maxValue: mv.maxValue,
+        points:points,
+        values:values
+    });
+}
+
 function threshold() {
     if(typeof rbf === 'undefined') {
         return;
@@ -222,7 +252,9 @@ function controlPointDownHandler(ev) {
 }
 
 function saveMask() {
-    const pixdim = mv.dimensions.absolute.pixdim;
+    thresholdJob();
+}
+function saveMask_old() {
     const dim = mv.mri.dim;
     let data = new Float32Array(dim[0]*dim[1]*dim[2]);
     let val;
@@ -244,6 +276,10 @@ function saveMask() {
             }
         }
     }
+    saveNifti(data);
+}
+
+function saveNifti(data) {
     let niigz = mv.mri.createNifti(mv.mri.dim, mv.mri.pixdim, mv.mri.vox2mm(), data);
     let name = prompt("Save mask as...", "mask.nii.gz");
     if(name !== null) {

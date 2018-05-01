@@ -131,4 +131,4 @@ function distanceMultiquadric(r, epsilon) {
 }
 
 //module.exports = RBF;
-window.RBF = RBF;
+var RBF = RBF;
