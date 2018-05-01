@@ -279,6 +279,17 @@ function saveMask_old() {
     saveNifti(data);
 }
 
+function loadNifti() {
+    var input=document.createElement("input");
+    input.type="file";
+    input.onchange=function(e){
+        var file=this.files[0];
+        console.log('loading', file);
+        init(file);
+    }
+    input.click();
+}
+
 function saveNifti(data) {
     let niigz = mv.mri.createNifti(mv.mri.dim, mv.mri.pixdim, mv.mri.vox2mm(), data);
     let name = prompt("Save mask as...", "mask.nii.gz");
@@ -332,6 +343,7 @@ function init(file) {
         space: 'voxel',
         views: [{
             elem: $('#viewer').get(0),
+            width:800,
             plane: 'sag',
             addPlaneSelect: true,
             addSpaceSelect: true
@@ -359,26 +371,8 @@ function init(file) {
         // Listen to canvas clicks
         $('body').on('click', 'canvas', clickOnViewer);
 
-        // Initialise UI
-        MUI.chose($('#tools'), function(option) {
-            selectedTool = option;
-            switch(selectedTool) {
-                case "Add":
-                    break;
-                case "Remove":
-                    break;
-            }
-        });
-        MUI.chose($('#overlay'), function(option) {
-            selectedOverlay = option;
-            mv.draw();
-        });
-        MUI.push($('#saveMask'), saveMask);
-        MUI.push($('#saveControlPoints'), saveControlPoints);
-        MUI.push($('#loadControlPoints'), loadControlPoints);
-
         $('#tools, #overlay, #saveMask, #saveControlPoints, #loadControlPoints').show();
-        $('#content').removeClass('init');
+        $('#buttons').removeClass('init');
 
         mv.maxValue *= 1.1;
         mv.draw();
@@ -387,3 +381,23 @@ function init(file) {
         console.log(err);
     });
 }
+
+// Initialise UI
+MUI.push($('#loadNifti'), loadNifti);
+MUI.chose($('#tools'), function(option) {
+    selectedTool = option;
+    switch(selectedTool) {
+        case "Add":
+            break;
+        case "Remove":
+            break;
+    }
+});
+MUI.chose($('#overlay'), function(option) {
+    selectedOverlay = option;
+    mv.draw();
+});
+MUI.push($('#saveMask'), saveMask);
+MUI.push($('#saveControlPoints'), saveControlPoints);
+MUI.push($('#loadControlPoints'), loadControlPoints);
+
