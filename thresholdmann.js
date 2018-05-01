@@ -48,31 +48,102 @@ function displayControlPoints() {
     }
 
     let i;
-    let s, c, a;
-    let width, height;
-    let x, y, z;
+    let x, y, slice;
+    const plane = mv.views[0].plane;
     $('.cpoint').remove();
+
+    const {W, H, D, Wdim, Hdim} = mv.dimensions.voxel[plane];
     for(i=0;i<points.length;i++) {
-        switch(mv.views[0].plane) {
-            case 'sag':
-                [x, y, z] = [points[i][1], points[i][2], points[i][0]];
-                [width, height] = [mv.mri.dim[1], mv.mri.dim[2]];
-                break;
-            case 'cor':
-                [x, y, z] = [points[i][0], points[i][2], points[i][1]];
-                [width, height] = [mv.mri.dim[0], mv.mri.dim[2]];
-                break;
-            case 'axi':
-                [x, y, z] = [points[i][0], points[i][1], points[i][2]];
-                [width, height] = [mv.mri.dim[0], mv.mri.dim[1]];
-                break;
+        const s = mv.IJK2S(points[i]);
+        switch (plane) {
+            case 'sag':[slice, x, y] = [s[0], s[1], H - 1 - s[2]]; break;
+            case 'cor':[x, slice, y] = [s[0], s[1], H - 1 - s[2]]; break;
+            case 'axi':[x, y, slice] = [s[0], H - 1 - s[1], s[2]]; break;
         }
-        if(z!=mv.views[0].slice) {
+        if(slice!=mv.views[0].slice) {
             continue;
         }
-        x=100*(0.5+x)/width;
-        y=100*(0.5+y)/height;
+        x=100*(0.5+x)/W;
+        y=100*(0.5+y)/H;
         $('#viewer .wrap').append(`<div class="cpoint" id="cp${i}" data-ijk="${points[i][0]},${points[i][1]},${points[i][2]}" style="left:${x}%;top:${y}%"></div>`);
+    }
+}
+
+function threshold() {
+    if(typeof rbf === 'undefined') {
+        return;
+    }
+
+    const c = mv.views[0].canvas;
+    const ctx = c.getContext("2d");
+    let x, y, slice;
+    let i, j, k, s;
+    let ind, g;
+    const {width, height} = c;
+    const plane = mv.views[0].plane;
+    const {W, H, D, Wdim, Hdim} = mv.dimensions.voxel[plane];
+    const px = ctx.getImageData(0,0,width,height);
+    slice=mv.views[0].slice;
+    for(x=0;x<W;x++) {
+        for(y=0;y<H;y++) {
+            switch(plane) {
+                case 'sag':
+                    s = [slice, x, H - 1 - y];
+                    break;
+                case 'cor':
+                    s = [x, slice, H - 1 - y];
+                    break;
+                case 'axi':
+                    s = [x, H - 1 - y, slice];
+                    break;
+            }
+            [i, j, k] = mv.S2IJK(s);
+            ind = y*width + x;
+            val = rbf([i, j, k]);
+            g = px.data[4*ind+0];
+            if(selectedOverlay === 'Threshold Mask') {
+                px.data[4*ind+0] = (g>=val)?255:g;
+                px.data[4*ind+1] = g;
+                px.data[4*ind+2] = g;
+            } else {
+                px.data[4*ind+0] = val|0;
+                px.data[4*ind+1] = val|0;
+                px.data[4*ind+2] = val|0;
+                px.data[4*ind+3] = 255;
+            }
+        }
+    }
+    ctx.putImageData(px, 0, 0);
+}
+
+function clickOnViewer(ev) {
+    const rect = $('canvas.viewer')[0].getBoundingClientRect();
+    const x = mv.views[0].canvas.width * (ev.clientX - rect.left)/rect.width|0;
+    const y = mv.views[0].canvas.height * (ev.clientY - rect.top)/rect.height|0;
+    const slice = mv.views[0].slice;
+    let i, j, k, s;
+    const plane = mv.views[0].plane;
+
+    const {W, H, D, Wdim, Hdim} = mv.dimensions.voxel[plane];
+
+    switch (plane) {
+        case 'sag': s = [slice, x, H - 1 - y]; break;
+        case 'cor': s = [x, slice, H - 1 - y]; break;
+        case 'axi': s = [x, H - 1 - y, slice]; break;
+    }
+    [i, j, k] = mv.S2IJK(s);
+
+    switch(selectedTool) {
+        case 'Select':
+            console.log([i, j, k], rbf([i, j, k]));
+            break;
+        case 'Add':
+            points.push([i,j,k]);
+            values.push(127);
+            initRBF(points, values);
+            displayControlPointsTable();
+            mv.draw();
+            break;
     }
 }
 
@@ -90,51 +161,6 @@ function changeThreshold(ob) {
     mv.draw();
     selectControlPoint(cpid);
     selectThresholdSlider(cpid);
-}
-
-function threshold() {
-    if(typeof rbf === 'undefined') {
-        return;
-    }
-
-    let val = parseFloat($('#threshold').val());
-    const c = mv.views[0].canvas;
-    const ctx = c.getContext("2d");
-    let x, y, z;
-    let i, j, k;
-    let ind, g;
-    const {width, height} = c;
-    const px = ctx.getImageData(0,0,width,height);
-    z=mv.views[0].slice;
-    for(x=0;x<width;x++) {
-        for(y=0;y<height;y++) {
-            switch(mv.views[0].plane) {
-                case 'sag':
-                    [i, j, k] = [z, x*mv.mri.dim[1]/width|0, y*mv.mri.dim[2]/height|0];
-                    break;
-                case 'cor':
-                    [i, j, k] = [x*mv.mri.dim[0]/width|0, z, y*mv.mri.dim[2]/height|0];
-                    break;
-                case 'axi':
-                    [i, j, k] = [x*mv.mri.dim[0]/width|0, y*mv.mri.dim[1]/height|0, z];
-                    break;
-            }
-            ind = y*width + x;
-            val = rbf([i, j, k]);
-            g = px.data[4*ind+0];
-            if(selectedOverlay === 'Threshold Mask') {
-                px.data[4*ind+0] = (g>=val)?255:g;
-                px.data[4*ind+1] = g;
-                px.data[4*ind+2] = g;
-            } else {
-                px.data[4*ind+0] = val|0;
-                px.data[4*ind+1] = val|0;
-                px.data[4*ind+2] = val|0;
-                px.data[4*ind+3] = 255;
-            }
-        }
-    }
-    ctx.putImageData(px, 0, 0);
 }
 
 function selectControlPoint(cpid) {
@@ -195,43 +221,6 @@ function controlPointUpHandler(ev) {
 function controlPointDownHandler(ev) {
 }
 
-function addControlPoint() {
-    $('.cpoint.selected').removeClass('selected');
-    $('#'+ev.target.id).addClass('selected');
-}
-function clickOnViewer(ev) {
-    const rect = $('canvas.viewer')[0].getBoundingClientRect();
-    const x = mv.views[0].canvas.width * (ev.clientX - rect.left)/rect.width|0;
-    const y = mv.views[0].canvas.height * (ev.clientY - rect.top)/rect.height|0;
-    const z = mv.views[0].slice;
-    let i, j, k;
-
-    switch(mv.views[0].plane) {
-        case 'sag':
-            [i, j, k] = [z, x, y];
-            break;
-        case 'cor':
-            [i, j, k] = [x, z, y];
-            break;
-        case 'axi':
-            [i, j, k] = [x, y, z];
-            break;
-    }
-
-    switch(selectedTool) {
-        case 'Select':
-            console.log(rbf([i, j, k]));
-            break;
-        case 'Add':
-            points.push([i,j,k]);
-            values.push(127);
-            initRBF(points, values);
-            displayControlPointsTable();
-            mv.draw();
-            break;
-    }
-}
-
 function saveMask() {
     const pixdim = mv.dimensions.absolute.pixdim;
     const dim = mv.mri.dim;
@@ -261,6 +250,41 @@ function saveMask() {
         mv.mri.saveNifti(niigz, name);
     }
 }
+function saveControlPoints() {
+    var a = document.createElement('a');
+    let ob = {
+        points: points,
+        values: values
+    };
+    a.href = 'data:application/json;charset=utf-8,' + JSON.stringify(ob);
+    let name = prompt("Save Control Points As...", "control-points.json");
+    if(name !== null) {
+        a.download=name;
+        document.body.appendChild(a);
+        a.click();
+    }
+}
+
+function loadControlPoints() {
+    var input=document.createElement("input");
+    input.type="file";
+    input.onchange=function(e){
+        var file=this.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            let str = e.target.result;
+            const ob = JSON.parse(str);
+            points = ob.points;
+            values = ob.values;
+            initRBF(points, values);
+            displayControlPointsTable();
+            mv.draw();
+        };
+        reader.readAsText(file);
+    }
+    input.click();
+}
+
 
 function init(file) {
     /*
@@ -286,7 +310,7 @@ function init(file) {
     mv.display()
     .then( (o) => {
         // Default control Points
-        points = [[104, 66, 82]];
+        points = [[mv.mri.dim[0]/2|0, mv.mri.dim[1]/2|0, mv.mri.dim[2]/2|0]];
         values = [127];
         initRBF(points, values);
         displayControlPointsTable();
@@ -315,8 +339,9 @@ function init(file) {
         });
         MUI.push($('#saveMask'), saveMask);
         MUI.push($('#saveControlPoints'), saveControlPoints);
+        MUI.push($('#loadControlPoints'), loadControlPoints);
 
-        $('#tools, #overlay, #saveMask, #saveControlPoints').show();
+        $('#tools, #overlay, #saveMask, #saveControlPoints, #loadControlPoints').show();
         $('#content').removeClass('init');
 
         mv.maxValue *= 1.1;

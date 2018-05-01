@@ -38,6 +38,7 @@ tr.selected {
 #tools,
 #overlay,
 #saveMask,
+#loadControlPoints,
 #saveControlPoints {
     display: none;
 }
