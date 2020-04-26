@@ -63,8 +63,8 @@ function displayControlPoints() {
         if(slice!=mv.views[0].slice) {
             continue;
         }
-        x=100*(0.5+x)/W;
-        y=100*(0.5+y)/H;
+        x = 100*(0.5+x)/W;
+        y = 100*(0.5+y)/H;
         $('#viewer .wrap').append(`<div class="cpoint" id="cp${i}" data-ijk="${points[i][0]},${points[i][1]},${points[i][2]}" style="left:${x}%;top:${y}%"></div>`);
     }
 }
@@ -72,11 +72,11 @@ function displayControlPoints() {
 function thresholdJob() {
     const worker = new Worker("thresholdmann-worker.js");
     worker.onmessage = function(e) {
-        var msg=e.data.msg;
+        var msg = e.data.msg;
         switch(msg) {
             case 'success':
                 console.log("Worker finished");
-                var data=e.data.mask;
+                var data = e.data.mask;
                 saveNifti(data);
                 $('#progress').text('Done');
                 setTimeout( ()=>{$('#progress').text('')}, 2000);
@@ -90,12 +90,12 @@ function thresholdJob() {
     }
     console.log("Start worker");
     worker.postMessage({
-        cmd:"start",
+        cmd: "start",
         mri: mv.mri.data,
         dim: mv.mri.dim,
         maxValue: mv.maxValue,
-        points:points,
-        values:values
+        points: points,
+        values: values
     });
 }
 
@@ -113,7 +113,7 @@ function threshold() {
     const plane = mv.views[0].plane;
     const {W, H, D, Wdim, Hdim} = mv.dimensions.voxel[plane];
     const px = ctx.getImageData(0,0,width,height);
-    slice=mv.views[0].slice;
+    slice = mv.views[0].slice;
     for(x=0;x<W;x++) {
         for(y=0;y<H;y++) {
             switch(plane) {
@@ -258,10 +258,8 @@ function saveMask_old() {
     const dim = mv.mri.dim;
     let data = new Float32Array(dim[0]*dim[1]*dim[2]);
     let val;
-    let x, y, z;
-    let i, s, w;
+    let i;
     let ijk;
-    let n = 0;
     for(i=0;i<dim[0];i++) {
         for(j=0;j<dim[1];j++) {
             for(k=0;k<dim[2];k++) {
@@ -280,10 +278,10 @@ function saveMask_old() {
 }
 
 function loadNifti() {
-    var input=document.createElement("input");
-    input.type="file";
-    input.onchange=function(e){
-        var file=this.files[0];
+    var input = document.createElement("input");
+    input.type = "file";
+    input.onchange = function(e){
+        var file = this.files[0];
         console.log('loading', file);
         init(file);
     }
@@ -306,17 +304,17 @@ function saveControlPoints() {
     a.href = 'data:application/json;charset=utf-8,' + JSON.stringify(ob);
     let name = prompt("Save Control Points As...", "control-points.json");
     if(name !== null) {
-        a.download=name;
+        a.download = name;
         document.body.appendChild(a);
         a.click();
     }
 }
 
 function loadControlPoints() {
-    var input=document.createElement("input");
-    input.type="file";
-    input.onchange=function(e){
-        var file=this.files[0];
+    var input = document.createElement("input");
+    input.type = "file";
+    input.onchange = function(e){
+        var file = this.files[0];
         var reader = new FileReader();
         reader.onload = function(e) {
             let str = e.target.result;
@@ -337,13 +335,13 @@ function init(file) {
     /*
         MRI Viewer
     */
-    mv=new MRIViewer({
-//        mriPath: 'galago.nii.gz',
+    mv = new MRIViewer({
+        // mriPath: 'galago.nii.gz',
         mriFile: file,
         space: 'voxel',
         views: [{
             elem: $('#viewer').get(0),
-            width:800,
+            width: 800,
             plane: 'sag',
             addPlaneSelect: true,
             addSpaceSelect: true

@@ -30,10 +30,8 @@ function thresholdMRI(params) {
     const {mri, dim, maxValue} = params;
     let data = new Float32Array(dim[0]*dim[1]*dim[2]);
     let val;
-    let x, y, z;
-    let i, s, w;
+    let i;
     let ijk;
-    let n = 0;
     for(i=0;i<dim[0];i++) {
         self.postMessage({msg: 'progress', value: `${i},${dim[0]}`});
         for(j=0;j<dim[1];j++) {
