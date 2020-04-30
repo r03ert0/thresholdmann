@@ -18,8 +18,8 @@ var rbf;
 
 function runThreshold(params) {
   self.postMessage({msg: "thresholding..."});
-  importScripts('/rbf/node_modules/numeric/numeric-1.2.6.min.js');
-  importScripts('/rbf/index.js');
+  importScripts('/thresholdmann/rbf/node_modules/numeric/numeric-1.2.6.min.js');
+  importScripts('/thresholdmann/rbf/index.js');
   const {points, values} = params;
   rbf = RBF(points, values, 'linear' /*, epsilon */);
   const mask = thresholdMRI(params);

@@ -353,7 +353,7 @@ function init(file) {
         width: 800,
         plane: 'sag',
         addPlaneSelect: true,
-        addSpaceSelect: true
+        addSpaceSelect: false
       }
     ]
   });
