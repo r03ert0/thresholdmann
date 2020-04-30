@@ -2,7 +2,7 @@ self.addEventListener('message', function(e) {
   var data = e.data;
   switch (data.cmd) {
     case 'start':
-      var params={
+      var params= {
         mri: data.mri,
         dim: data.dim,
         maxValue: data.maxValue,
