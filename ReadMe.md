@@ -1,8 +1,11 @@
 # Thresholdmann
 
+A Web tool for interactively creating adaptive thresholds to segment MRI data.
+
 Katja Heuer & Roberto Toro, April 2018
 
-A Web tool for interactively creating adaptive thresholds to segment MRI data.
+[![CircleCI](https://circleci.com/gh/neuroanatomy/thresholdmann.svg?style=shield)](https://circleci.com/gh/neuroanatomy/thresholdmann)
+
 
 Simply drag & drop your MRI file for display in an interactive stereotaxic viewer.  
 
