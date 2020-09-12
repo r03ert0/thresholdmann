@@ -1,11 +1,14 @@
 /* global MUI, $ */
-var mv;
-var originalDraw;
-var points;
-var values;
-var rbf;
-var selectedTool = "Select";
-var selectedOverlay = "Threshold Mask";
+const globals = {
+  mv: null,
+  originalDraw: null,
+  points: null,
+  values: null,
+  rbf: null,
+  selectedTool: "Select",
+  selectedOverlay: "Threshold Mask",
+}
+window.globals = globals;
 
 function initRBF(points, values) {
 
@@ -20,11 +23,12 @@ function initRBF(points, values) {
   epsilon can be provided as a 4th parameter. Defaults to the average
   euclidean distance between points.
   */
-  rbf = RBF(points, values, 'linear' /*, epsilon */);
+  globals.rbf = RBF(points, values, 'linear' /*, epsilon */);
 }
 
 function displayControlPointsTable() {
   let i;
+  const {points, values} = globals;
 
   // display control point table
   $('#control').html('<table></table>');
@@ -45,6 +49,7 @@ function displayControlPointsTable() {
 }
 
 function displayControlPoints() {
+  const {mv, points} = globals;
   if(typeof points === 'undefined') {
     return;
   }
@@ -94,15 +99,16 @@ function thresholdJob() {
   console.log("Start worker");
   worker.postMessage({
     cmd: "start",
-    mri: mv.mri.data,
-    dim: mv.mri.dim,
-    maxValue: mv.maxValue,
-    points: points,
-    values: values
+    mri: globals.mv.mri.data,
+    dim: globals.mv.mri.dim,
+    maxValue: globals.mv.maxValue,
+    points: globals.points,
+    values: globals.values
   });
 }
 
 function threshold() {
+  const {mv, rbf, selectedOverlay} = globals;
   if(typeof rbf === 'undefined') {
     return;
   }
@@ -150,6 +156,7 @@ function threshold() {
 }
 
 function clickOnViewer(ev) {
+  const {mv} = globals;
   const rect = $('canvas.viewer')[0].getBoundingClientRect();
   const x = mv.views[0].canvas.width * (ev.clientX - rect.left)/rect.width|0;
   const y = mv.views[0].canvas.height * (ev.clientY - rect.top)/rect.height|0;
@@ -181,6 +188,7 @@ function clickOnViewer(ev) {
 }
 
 function changeThreshold(ob) {
+  const {mv, points, values} = globals;
   const val = parseFloat(ob.value);
   const data = $(ob).data().ijk;
   const cpid = $(`[data-ijk="${data}"]`).attr('id');
@@ -214,24 +222,10 @@ function controlPointMoveHandler(ev) {
 
     return;
   }
-
-/*
-  const data = $('#'+cpid).data().ijk;
-  const rect = $('canvas.viewer')[0].getBoundingClientRect();
-  const x = mv.views[0].canvas.width * (ev.clientX - rect.left)/rect.width|0;
-  const y = mv.views[0].canvas.height * (ev.clientY - rect.top)/rect.height|0;
-  const z = mv.views[0].slice;
-  const [i, j, k] = [z, x, y];
-
-  points.push([i,j,k]);
-  values.push(127);
-  initRBF(points, values);
-  displayControlPointsTable();
-  mv.draw();
-*/
 }
 
 function controlPointUpHandler(ev) {
+  const {mv} = globals;
   const cpid = ev.target.id;
 
   switch(selectedTool) {
@@ -251,7 +245,8 @@ function controlPointUpHandler(ev) {
       initRBF(points, values);
       displayControlPointsTable();
       mv.draw();
-      break; }
+      break;
+    }
   }
 }
 
@@ -262,6 +257,7 @@ function saveMask() {
   thresholdJob();
 }
 function saveMask_old() {
+  const {mv} = globals;
   const [dim] = mv.mri;
   let data = new Float32Array(dim[0]*dim[1]*dim[2]);
   let val;
@@ -296,6 +292,7 @@ function loadNifti() {
 }
 
 function saveNifti(data) {
+  const {mv} = globals;
   let niigz = mv.mri.createNifti(mv.mri.dim, mv.mri.pixdim, mv.mri.vox2mm(), data);
   let name = prompt("Save mask as...", "mask.nii.gz");
   if(name !== null) {
@@ -318,6 +315,7 @@ function saveControlPoints() {
 }
 
 function loadControlPoints() {
+  const {mv} = globals;
   var input = document.createElement("input");
   input.type = "file";
   input.onchange = function(e) {
@@ -337,15 +335,10 @@ function loadControlPoints() {
   input.click();
 }
 
-
-function init(file) {
-
-  /*
-    MRI Viewer
-  */
-  mv = new MRIViewer({
-    // mriPath: 'galago.nii.gz',
+function _newMRIViewer({file, path}) {
+  globals.mv = new MRIViewer({
     mriFile: file,
+    mriPath: path,
     space: 'voxel',
     views: [
       {
@@ -357,55 +350,73 @@ function init(file) {
       }
     ]
   });
-  originalDraw = mv.draw;
-  mv.draw = function draw() {
-    originalDraw();
+  globals.originalDraw = globals.mv.draw;
+}
+
+async function _display() {
+  try {
+    await globals.mv.display();
+  } catch(err) {
+    throw new Error(err);
+  }
+}
+
+function initUI() {
+  const {mv} = globals;
+  // Default control Points
+  globals.points = [[mv.mri.dim[0]/2|0, mv.mri.dim[1]/2|0, mv.mri.dim[2]/2|0]];
+  globals.values = [127];
+  initRBF(globals.points, globals.values);
+  displayControlPointsTable();
+
+  globals.mv.draw = function draw() {
+    globals.originalDraw();
     threshold();
     displayControlPoints();
   };
-  mv.display()
-    .then( (o) => {
-      // Default control Points
-      points = [[mv.mri.dim[0]/2|0, mv.mri.dim[1]/2|0, mv.mri.dim[2]/2|0]];
-      values = [127];
-      initRBF(points, values);
-      displayControlPointsTable();
 
-      // Listen to control point clicks
-      $('body').on('mouseup', '.cpoint', controlPointUpHandler);
-      $('body').on('mousedown', '.cpoint', controlPointDownHandler);
-      $('body').on('mousemove', '.cpoint', controlPointMoveHandler);
+  mv.maxValue *= 1.1;
+  mv.draw();
 
-      // Listen to canvas clicks
-      $('body').on('click', 'canvas', clickOnViewer);
+  // Listen to control point clicks
+  $('body').on('mouseup', '.cpoint', controlPointUpHandler);
+  $('body').on('mousedown', '.cpoint', controlPointDownHandler);
+  $('body').on('mousemove', '.cpoint', controlPointMoveHandler);
 
-      $('#tools, #overlay, #saveMask, #saveControlPoints, #loadControlPoints').show();
-      $('#buttons').removeClass('init');
+  // Listen to canvas clicks
+  $('body').on('click', 'canvas', clickOnViewer);
 
-      mv.maxValue *= 1.1;
-      mv.draw();
-    })
-    .catch((err) => {
-      console.log(err);
-    });
+  $('#tools, #overlay, #saveMask, #saveControlPoints, #loadControlPoints').show();
+  $('#buttons').removeClass('init');
+
+  // Initialise UI
+  MUI.push($('#loadNifti'), loadNifti);
+  MUI.chose($('#tools'), function(option) {
+    globals.selectedTool = option;
+    switch(globals.selectedTool) {
+      case "Add":
+        break;
+      case "Remove":
+        break;
+    }
+  });
+  MUI.chose($('#overlay'), function(option) {
+    globals.selectedOverlay = option;
+    globals.mv.draw();
+  });
+  MUI.push($('#saveMask'), saveMask);
+  MUI.push($('#saveControlPoints'), saveControlPoints);
+  MUI.push($('#loadControlPoints'), loadControlPoints);
 }
 
-// Initialise UI
-MUI.push($('#loadNifti'), loadNifti);
-MUI.chose($('#tools'), function(option) {
-  selectedTool = option;
-  switch(selectedTool) {
-    case "Add":
-      break;
-    case "Remove":
-      break;
-  }
-});
-MUI.chose($('#overlay'), function(option) {
-  selectedOverlay = option;
-  mv.draw();
-});
-MUI.push($('#saveMask'), saveMask);
-MUI.push($('#saveControlPoints'), saveControlPoints);
-MUI.push($('#loadControlPoints'), loadControlPoints);
+async function initWithPath(path) {
+  _newMRIViewer({path});
+  await _display();
+  initUI();
+}
 
+async function init(file) {
+  _newMRIViewer({file});
+  await _display();
+  initUI();
+}
