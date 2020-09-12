@@ -2,7 +2,7 @@
 
 Katja Heuer & Roberto Toro, April 2018
 
-A Web tool for interactively creating adaptive thresholds to segment nifti images.
+A Web tool for interactively creating adaptive thresholds to segment MRI data.
 
 Simply drag & drop your MRI file for display in an interactive stereotaxic viewer.  
 
