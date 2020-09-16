@@ -50,7 +50,7 @@ function displayControlPointsTable() {
 
 function displayControlPoints() {
   const {mv, points} = globals;
-  if(typeof points === 'undefined') {
+  if(typeof globals.points === 'undefined') {
     return;
   }
 
@@ -156,7 +156,7 @@ function threshold() {
 }
 
 function clickOnViewer(ev) {
-  const {mv} = globals;
+  const {mv, points, values} = globals;
   const rect = $('canvas.viewer')[0].getBoundingClientRect();
   const x = mv.views[0].canvas.width * (ev.clientX - rect.left)/rect.width|0;
   const y = mv.views[0].canvas.height * (ev.clientY - rect.top)/rect.height|0;
@@ -173,14 +173,14 @@ function clickOnViewer(ev) {
   }
   [i, j, k] = mv.S2IJK(s);
 
-  switch(selectedTool) {
+  switch(globals.selectedTool) {
     case 'Select':
       console.log([i, j, k], rbf([i, j, k]));
       break;
     case 'Add':
-      points.push([i, j, k]);
-      values.push(127);
-      initRBF(points, values);
+      globals.points.push([i, j, k]);
+      globals.values.push(127);
+      initRBF(globals.points, globals.values);
       displayControlPointsTable();
       mv.draw();
       break;
@@ -194,12 +194,12 @@ function changeThreshold(ob) {
   const cpid = $(`[data-ijk="${data}"]`).attr('id');
 
   let i;
-  for(i=points.length-1; i>=0; i--) {
-    if(data === points[i][0]+','+points[i][1]+','+points[i][2]) {
-      values[i] = val;
+  for(i=globals.points.length-1; i>=0; i--) {
+    if(data === globals.points[i][0]+','+globals.points[i][1]+','+globals.points[i][2]) {
+      globals.values[i] = val;
     }
   }
-  initRBF(points, values);
+  initRBF(globals.points, globals.values);
   mv.draw();
   selectControlPoint(cpid);
   selectThresholdSlider(cpid);
@@ -225,10 +225,10 @@ function controlPointMoveHandler(ev) {
 }
 
 function controlPointUpHandler(ev) {
-  const {mv} = globals;
+  const {mv, points, values} = globals;
   const cpid = ev.target.id;
 
-  switch(selectedTool) {
+  switch(globals.selectedTool) {
     case 'Select':
       selectControlPoint(cpid);
       selectThresholdSlider(cpid);
@@ -236,13 +236,13 @@ function controlPointUpHandler(ev) {
     case 'Remove': {
       let i;
       const data = $('#'+cpid).data().ijk;
-      for(i=points.length-1; i>=0; i--) {
-        if(data === points[i][0]+','+points[i][1]+','+points[i][2]) {
-          points.splice(i, 1);
-          values.splice(i, 1);
+      for(i=globals.points.length-1; i>=0; i--) {
+        if(data === globals.points[i][0]+','+globals.points[i][1]+','+globals.points[i][2]) {
+          globals.points.splice(i, 1);
+          globals.values.splice(i, 1);
         }
       }
-      initRBF(points, values);
+      initRBF(globals.points, globals.values);
       displayControlPointsTable();
       mv.draw();
       break;
@@ -301,9 +301,10 @@ function saveNifti(data) {
 }
 function saveControlPoints() {
   var a = document.createElement('a');
+  const {points, values} = globals;
   const ob = {
-    points: points,
-    values: values
+    points: globals.points,
+    values: globals.values
   };
   a.href = 'data:application/json;charset=utf-8,' + JSON.stringify(ob);
   let name = prompt("Save Control Points As...", "control-points.json");
