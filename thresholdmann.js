@@ -56,23 +56,23 @@ function displayControlPoints() {
 
   let i;
   let slice, x, y;
-  const plane = mv.views[0].plane;
+  const plane = globals.mv.views[0].plane;
   $('.cpoint').remove();
 
   const {W, H, D, Wdim, Hdim} = mv.dimensions.voxel[plane];
-  for(i=0; i<points.length; i++) {
-    const s = mv.IJK2S(points[i]);
+  for(i=0; i<globals.points.length; i++) {
+    const s = globals.mv.IJK2S(globals.points[i]);
     switch (plane) {
       case 'sag': [slice, x, y] = [s[0], s[1], H - 1 - s[2]]; break;
       case 'cor': [x, slice, y] = [s[0], s[1], H - 1 - s[2]]; break;
       case 'axi': [x, y, slice] = [s[0], H - 1 - s[1], s[2]]; break;
     }
-    if(slice !== mv.views[0].slice) {
+    if(slice !== globals.mv.views[0].slice) {
       continue;
     }
     x = 100*(0.5+x)/W;
     y = 100*(0.5+y)/H;
-    $('#viewer .wrap').append(`<div class="cpoint" id="cp${i}" data-ijk="${points[i][0]},${points[i][1]},${points[i][2]}" style="left:${x}%;top:${y}%"></div>`);
+    $('#viewer .wrap').append(`<div class="cpoint" id="cp${i}" data-ijk="${globals.points[i][0]},${globals.points[i][1]},${globals.points[i][2]}" style="left:${x}%;top:${y}%"></div>`);
   }
 }
 
@@ -316,7 +316,7 @@ function saveControlPoints() {
 }
 
 function loadControlPoints() {
-  const {mv} = globals;
+  const {mv, points, values} = globals;
   var input = document.createElement("input");
   input.type = "file";
   input.onchange = function(e) {
@@ -325,11 +325,11 @@ function loadControlPoints() {
     reader.onload = function(e) {
       let str = e.target.result;
       const ob = JSON.parse(str);
-      points = ob.points;
-      values = ob.values;
-      initRBF(points, values);
+      globals.points = ob.points;
+      globals.values = ob.values;
+      initRBF(globals.points, globals.values);
       displayControlPointsTable();
-      mv.draw();
+      globals.mv.draw();
     };
     reader.readAsText(file);
   };
