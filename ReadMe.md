@@ -7,16 +7,10 @@ Katja Heuer & Roberto Toro, April 2018
 [![CircleCI](https://circleci.com/gh/neuroanatomy/thresholdmann.svg?style=shield)](https://circleci.com/gh/neuroanatomy/thresholdmann)
 
 
-Simply drag & drop your MRI file for display in an interactive stereotaxic viewer.  
+Simply drag & drop your MRI file for display in an interactive stereotaxic viewer. Add a control point and grow or shrink your selection from there.
+You can later re-select and adjust control points or delete them. Once you are happy with your selection, you can download the control points (json) and you can download the mask (`.nii.gz`).
 
 <img src="https://user-images.githubusercontent.com/6297454/41974463-4c29f89c-7a18-11e8-8617-558869b13299.gif" width="100%" />
-
-
-Add a control point and grow or shrink your selection from there.
-You can later re-select and adjust control points or delete them.
-Once you are happy with your selection, you can download the control points (json) and you can download the mask (.nii.gz).
-
-# __________________________________________
 
 Brain extraction and segmentation are required for any downstream analysis of neuroimaging data. Obtaining appropriate masks can be particularly difficult in non-human brain imaging, as standard automatic tools struggle with the surrounding muscle tissue, skull, and strong luminosity gradients. A simple interactive threshold is intuitive and fast to apply, and can often provide a rather good initial guess. However, because of luminosity gradients, the threshold that works for a brain region is likely to fail in another.
 
