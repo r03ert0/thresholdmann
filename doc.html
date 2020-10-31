@@ -32,6 +32,8 @@
       font-family: "Roboto Mono", monospace;
       font-size: 14px;
       font-weight: 100;
+      line-height: 1.5rem;
+      text-indent: -0.5rem;
       color: white;
       text-align: left;
     }
@@ -83,7 +85,7 @@
       <div class="doc">
         <h1>Documentation</h1>
         <p>
-          <b>Load & navigate data.</b> To load your data, simply drag and drop your nifti volume onto the Thresholdmann box. Your MRI will appear in a stereotaxic viewer. (Note: Only .nii.gz can be loaded at this time.) Navigate through slices using the slider below the viewer and switch view planes using the buttons.
+          <b>Load & navigate data.</b> To load your data, simply drag and drop your nifti volume (.nii.gz or .nii) onto the upload box. Your MRI will appear in a stereotaxic viewer. Navigate through slices using the slider below the viewer and switch view planes using the buttons.
         </p>
         <p>
           <b>Add control points.</b> The viewer is initialised with one control point at the center of the MRI volume. To add another control point, select the Add tool in the left panel, and click in the desired position in the viewer. This produces a space-varying threshold obtained through radial
@@ -100,7 +102,7 @@
           <b>Remove a control point.</b> Select the Remove tool in the left panel and then in the viewer click on the control point you want to remove.
         </p>
         <p>
-          <b>Saving.</b> Please save the control points together with your mask nifti volume for a fully reproducible workflow.<br />
+          <b>Saving.</b> Save the control points together with your mask nifti volume for a fully reproducible workflow.<br />
           <p2 style="font-weight: 400;">Save Control Points</p2> saves a list of the current control points to a json file.<br />
           <p2 style="font-weight: 400;">Save Mask</p2> saves the thresholded mask of the current MRI in nifti format. Depending on the size of your volume, the save may take a moment. The save progress is displayed below the viewer and you need to click "Download" once the popup appears in your browser window. (If you leave the window unattended, the save will disappear after a moment 🙃).
         </p>
@@ -110,17 +112,20 @@
         <p>
           <b>View Threshold Value.</b> Select Threshold value in the left panel to view the threshold value corresponding to the current mask. These volumes are updated in real time and can both be inspected interactively.<br />
         </p>
+        <p>
+          <b>Load new MRI file.</b> Simply reload the webpage to start working with a new MRI.<br />
+        </p>
         
         <img style="max-width:700px;padding-top:30px;padding-bottom:3px;padding-right:25px;" src="https://raw.githubusercontent.com/neuroanatomy/thresholdmann/master/img/thresholdmann_fig1_dark.png" alt=""/>
-        <p style="padding-left:26px;padding-right:26px;font-size:12px;">
+        <p style="padding-left:26px;padding-right:26px;font-size:12px;text-indent: 0rem;">
           <b>Thresholdmann interface and workflow.</b> Control points (blue dots) are added by clicking at the desired position in the viewer. This adds a slider to the right, which can be used to locally adapt the threshold. Progressively add control points to create a mask of the brain.<br />
         </p>
         <img style="max-width:700px;padding-top:30px;padding-bottom:3px;padding-left:25px;padding-right:25px;" src="https://raw.githubusercontent.com/neuroanatomy/thresholdmann/master/img/thresholdmann_fig2_dark.png" alt=""/>
-        <p style="padding-left:26px;padding-right:26px;font-size:12px;">
+        <p style="padding-left:26px;padding-right:26px;font-size:12px;text-indent: 0rem;">
           <b>Thresholdmann viewer.</b> Threshold mask and corresponding threshold value. These volumes are updated in real time and can both be inspected interactively. The set of control points and the mask can be downloaded.<br />
         </p>
         <img style="max-width:700px;padding-top:30px;padding-bottom:3px;padding-left:25px;padding-right:25px;" src="https://raw.githubusercontent.com/neuroanatomy/thresholdmann/master/img/thresholdmann_fig3_dark.png" alt=""/>
-        <p style="padding-left:26px;padding-right:26px;font-size:12px;">
+        <p style="padding-left:26px;padding-right:26px;font-size:12px;text-indent: 0rem;">
           <b>Thresholdmann result.</b> Download the mask created based on your set of control points. Make sure that the brain region was sufficiently disjoint from the rest of the head so that a mathematical morphology closing will be enough to completely separate it. This will give you a mask like shown in this image with its reconstructed surface as an example.<br /><br /><br />
         </p>
 
