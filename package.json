@@ -1,0 +1,30 @@
+{
+  "name": "thresholdmann",
+  "version": "1.0.0",
+  "description": "A Web tool for interactively creating adaptive thresholds to segment nifti images.",
+  "main": "thresholdmann.js",
+  "scripts": {
+    "test": "mocha --exit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neuroanatomy/thresholdmann.git"
+  },
+  "keywords": [
+    "MRI",
+    "neuroimaging",
+    "threshold",
+    "Web",
+    "tool",
+    "radial basis functions"
+  ],
+  "author": "Roberto Toro <rto@braincatalogue.org> (https://neuroanatomy.github.io)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/neuroanatomy/thresholdmann/issues"
+  },
+  "homepage": "https://github.com/neuroanatomy/thresholdmann#readme",
+  "devDependencies": {
+    "puppeteer": "^5.2.1"
+  }
+}
