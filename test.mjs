@@ -33,7 +33,7 @@ describe('Test Thresholdmann', () => {
         var msg = await page.evaluate(() => {
           return document.querySelector(".box_input").innerText;
         })
-        assert.equal(msg, "\nChoose a .nii.gz file or drag it here.");
+        assert.equal(msg, "\nChoose a .nii.gz or a .nii file or drag it here.");
       });
       it('init with test nifti file', async () => {
         const path = "./img/bear_uchar.nii.gz";
