@@ -4,7 +4,7 @@
   "description": "A Web tool for interactively creating adaptive thresholds to segment nifti images.",
   "main": "thresholdmann.js",
   "scripts": {
-    "test": "mocha --exit"
+    "test": "http-server . & sleep 2 & mocha --exit"
   },
   "repository": {
     "type": "git",
@@ -25,6 +25,6 @@
   },
   "homepage": "https://github.com/neuroanatomy/thresholdmann#readme",
   "devDependencies": {
-    "puppeteer": "^5.2.1"
+    "puppeteer": "^5.4.1"
   }
 }
