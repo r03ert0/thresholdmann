@@ -11,12 +11,12 @@ describe('Test Thresholdmann', () => {
   });
 
   describe('Unit tests', () => {
-    describe('Hey', () => {
+    describe('Trivial test', () => {
       it('should say hey', async () => {
         const res = await page.evaluate(() => {
           return window.location;
         });
-        assert.equal("hey", "hey");
+        assert.strictEqual("hey", "hey");
       });
     });
   });
@@ -27,13 +27,13 @@ describe('Test Thresholdmann', () => {
         var title = await page.evaluate(() => {
           return document.title;
         });
-        assert.equal(title, "Thresholdmann");
+        assert.strictEqual(title, "Thresholdmann");
       });
       it('should display "Choose..." message', async () => {
         var msg = await page.evaluate(() => {
           return document.querySelector(".box_input").innerText;
         })
-        assert.equal(msg, "\nChoose a .nii.gz file or drag it here.");
+        assert.strictEqual(msg, "\nChoose a .nii.gz or a .nii file or drag it here.");
       });
       it('init with test nifti file', async () => {
         const path = "./img/bear_uchar.nii.gz";
@@ -41,7 +41,7 @@ describe('Test Thresholdmann', () => {
           await window.initWithPath(path);
           return typeof window.globals.mv.mri;
         }, path);
-        assert.equal(res, "object");
+        assert.strictEqual(res, "object");
       }).timeout(5000);
     });
   });
