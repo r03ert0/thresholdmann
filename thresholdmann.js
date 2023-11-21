@@ -537,18 +537,17 @@ const _newPlaneSelectionUI = () => {
 
 const initUI = () => {
   const {mv} = globals;
-  // Default control Points
-  globals.points = [];
-  globals.values = [];
-  for (let iter=0; iter<10; iter++) {
-    globals.points.push([
-      (Math.random() * mv.mri.dim[0])|0,
-      (Math.random() * mv.mri.dim[1])|0,
-      (Math.random() * mv.mri.dim[2])|0
-    ]);
-    globals.values.push(100 + Math.random() * 40);
-  }
-  // initRBF(globals.points, globals.values);
+
+  // Default control point
+  globals.points = [
+    [
+      mv.mri.dim[0]/2|0,
+      mv.mri.dim[1]/2|0,
+      mv.mri.dim[2]/2|0
+    ]
+  ];
+  globals.values = [127];
+
   displayControlPointsTable();
 
   globals.mv.draw = function draw() {
