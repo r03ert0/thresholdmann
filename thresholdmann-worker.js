@@ -1,34 +1,22 @@
-self.addEventListener('message', function(e) {
-  var data = e.data;
-  switch (data.cmd) {
-    case 'start':
-      var params= {
-        mri: data.mri,
-        dim: data.dim,
-        maxValue: data.maxValue,
-        points: data.points,
-        values: data.values
-      };
-      runThreshold(params);
-      break;
+const interpolation = (pos, points, values) => {
+  let val = 0;
+  let totalw = 0;
+  for (let k=0; k<points.length; k++) {
+    const d =
+      (pos[0] - points[k][0]) ** 2 +
+      (pos[1] - points[k][1]) ** 2 +
+      (pos[2] - points[k][2]) ** 2;
+    const w = 1 / (d + 0.001);
+    val += w * values[k];
+    totalw += w;
   }
-});
 
-var rbf;
+  return val / totalw;
+};
 
-function runThreshold(params) {
-  self.postMessage({msg: "thresholding..."});
-  importScripts('rbf/node_modules/numeric/numeric-1.2.6.min.js');
-  importScripts('rbf/index.js');
-  const {points, values} = params;
-  rbf = RBF(points, values, 'linear' /*, epsilon */);
-  const mask = thresholdMRI(params);
-  self.postMessage({msg: "success", mask: mask}, [mask.buffer]);
-}
-
-function thresholdMRI(params) {
-  const {mri, dim, maxValue} = params;
-  let data = new Float32Array(dim[0]*dim[1]*dim[2]);
+const thresholdMRI = (params) => {
+  const { mri, dim, maxValue, points, values, direction } = params;
+  const data = new Float32Array(dim[0]*dim[1]*dim[2]);
   let val;
   let i, j, k;
   let ijk;
@@ -37,16 +25,41 @@ function thresholdMRI(params) {
     for(j=0; j<dim[1]; j++) {
       for(k=0; k<dim[2]; k++) {
         ijk = k*dim[1]*dim[0] + j*dim[0] + i;
-        val = rbf([i, j, k])*maxValue/255;
+        val = interpolation([i, j, k], points, values)*maxValue/255;
 
-        if(mri[ijk] <= val) {
-          data[ijk] = 0;
+        if (direction) {
+          data[ijk] = (mri[ijk] <= val)?0:1;
         } else {
-          data[ijk] = 1;
+          data[ijk] = (mri[ijk] >= val)?0:1;
         }
       }
     }
   }
 
   return data;
-}
+};
+
+const runThreshold = (params) => {
+  self.postMessage({msg: "thresholding..."});
+  // importScripts('rbf/node_modules/numeric/numeric-1.2.6.min.js');
+  // importScripts('rbf/index.js');
+  const mask = thresholdMRI(params);
+  self.postMessage({msg: "success", mask: mask}, [mask.buffer]);
+};
+
+self.addEventListener('message', function(e) {
+  const {data} = e;
+  switch (data.cmd) {
+  case 'start': {
+    const params= {
+      mri: data.mri,
+      dim: data.dim,
+      maxValue: data.maxValue,
+      points: data.points,
+      values: data.values
+    };
+    runThreshold(params);
+    break;
+  }
+  }
+});

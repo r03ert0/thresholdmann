@@ -16,7 +16,7 @@
     "threshold",
     "Web",
     "tool",
-    "radial basis functions"
+    "interactive"
   ],
   "author": "Roberto Toro <rto@braincatalogue.org> (https://neuroanatomy.github.io)",
   "license": "ISC",
@@ -26,5 +26,8 @@
   "homepage": "https://github.com/neuroanatomy/thresholdmann#readme",
   "devDependencies": {
     "puppeteer": "^5.4.1"
+  },
+  "dependencies": {
+    "eslint-config-naat": "github:neuroanatomy/eslint-config-naat"
   }
 }
