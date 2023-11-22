@@ -153,15 +153,16 @@ const thresholdJob = () => {
   };
   console.log("Start worker");
   document.querySelector("#progress").style.display = "inline-block";
-  worker.postMessage({
+  const params = {
     cmd: "start",
     mri: globals.mv.mri.data,
     dim: globals.mv.mri.dim,
     maxValue: globals.mv.maxValue,
     points: globals.points,
     values: globals.values,
-    direction: (globals.selectedDirection === "SelectUp")
-  });
+    directionUp: (globals.selectedDirection === "SelectUp")
+  };
+  worker.postMessage(params);
 };
 
 const _screenCoord = (plane, x, y, slice, H) => {

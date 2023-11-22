@@ -15,7 +15,7 @@ const interpolation = (pos, points, values) => {
 };
 
 const thresholdMRI = (params) => {
-  const { mri, dim, maxValue, points, values, direction } = params;
+  const { mri, dim, maxValue, points, values, directionUp } = params;
   const data = new Float32Array(dim[0]*dim[1]*dim[2]);
   let val;
   let i, j, k;
@@ -27,7 +27,7 @@ const thresholdMRI = (params) => {
         ijk = k*dim[1]*dim[0] + j*dim[0] + i;
         val = interpolation([i, j, k], points, values)*maxValue/255;
 
-        if (direction) {
+        if (directionUp) {
           data[ijk] = (mri[ijk] <= val)?0:1;
         } else {
           data[ijk] = (mri[ijk] >= val)?0:1;
@@ -56,7 +56,8 @@ self.addEventListener('message', function(e) {
       dim: data.dim,
       maxValue: data.maxValue,
       points: data.points,
-      values: data.values
+      values: data.values,
+      directionUp: data.directionUp
     };
     runThreshold(params);
     break;
