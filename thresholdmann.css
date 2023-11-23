@@ -33,6 +33,12 @@ html, body {
   flex-direction: column;
   justify-content: flex-start;
 }
+#info {
+  color: white;
+  font-family: 'Montserrat', sans-serif;
+  font-size: var(--normal-font-size);
+  font-weight: 200;
+}
 .cpoint {
   position: absolute;
   display: block;

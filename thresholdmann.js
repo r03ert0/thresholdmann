@@ -35,22 +35,6 @@ const interpolation = (pos) => {
 };
 globals.rbf = interpolation;
 
-/*
-const initRBF = (points, values) => {
-  // - linear: r
-  // - cubic: r**3
-  // - quintic: r**5
-  // - thin-plate: r**2 * log(r)
-  // - gaussian: exp(-(r/epsilon) ** 2)
-  // - multiquadric: sqrt((r/epsilon) ** 2 + 1)
-  // - inverse-multiquadric: 1 / sqrt((r/epsilon) ** 2 + 1)
-  // epsilon can be provided as a 4th parameter. Defaults to the average
-  // euclidean distance between points.
-  // eslint-disable-next-line new-cap
-  globals.rbf = RBF(points, values, 'linear'); //, epsilon);
-};
-*/
-
 const displayControlPointsTable = () => {
   let i;
   const {points, values} = globals;
@@ -64,7 +48,7 @@ const displayControlPointsTable = () => {
   let str = "";
   for(i=0; i<points.length; i++) {
     str += `
-<tr onclick="selectRow(this)" ${(cpidIndex === i)?'class="selected"':''}>
+<tr onclick="selectRow(this)" data-cpid="cp${i}" ${(cpidIndex === i)?'class="selected"':''}>
   <td class="ijk">${points[i][0]}</td>
   <td class="ijk">${points[i][1]}</td>
   <td class="ijk">${points[i][2]}</td>
@@ -76,37 +60,72 @@ const displayControlPointsTable = () => {
   document.querySelector('#control table tbody').innerHTML = str;
 };
 
-const displayControlPoints = () => {
+const screen2voxel = (ev) => {
   const {mv} = globals;
+  const {left, top, width, height} = $('canvas.viewer')[0].getBoundingClientRect();
+  const [{slice, plane}] = mv.views;
+  const {W, H} = mv.dimensions.voxel[plane];
+  const height2 = H * width / W;
+  const offset = (height - height2)/2;
+  const x = mv.views[0].canvas.width * (ev.clientX - left)/width|0;
+  const y = mv.views[0].canvas.height * (ev.clientY - (top + offset))/height2|0;
+  let s;
+  // console.log({width, height, height2, W, H});
+
+  switch (plane) {
+  case 'sag': s = [slice, x, H - 1 - y]; break;
+  case 'cor': s = [x, slice, H - 1 - y]; break;
+  case 'axi': s = [x, H - 1 - y, slice]; break;
+  }
+
+  // eslint-disable-next-line new-cap
+  return mv.S2IJK(s);
+};
+
+/** Convert a voxel coordinate to a screen coordinate.
+ * The screen coordinate is expressed in percentage of the
+ * width and height of the MRI canvas.
+ * @param {number[]} point - the voxel coordinate
+ * @returns {number[]} the screen coordinate
+ */
+const voxel2screen = (point) => {
+  const {mv} = globals;
+  const {width, height: heightLarge} = $('canvas.viewer')[0].getBoundingClientRect();
+  const [{plane}] = mv.views;
+  const {W, H} = mv.dimensions.voxel[plane];
+  const height = H * width / W;
+  const Hlarge = H * heightLarge / height;
+  const offset = (Hlarge - H)/2;
+  // eslint-disable-next-line new-cap
+  const s = globals.mv.IJK2S(point);
+  let slice, x, y;
+  switch (plane) {
+  case 'sag': [slice, x, y] = [s[0], s[1], H - 1 - s[2]]; break;
+  case 'cor': [x, slice, y] = [s[0], s[1], H - 1 - s[2]]; break;
+  case 'axi': [x, y, slice] = [s[0], H - 1 - s[1], s[2]]; break;
+  }
+  x = 100 * (0.5 + x) / W;
+  y = 100 * (0.5 + y + offset) / Hlarge;
+
+  return [x, y, slice];
+};
+
+const displayControlPoints = () => {
   if(typeof globals.points === 'undefined') {
     return;
   }
 
-  let i, slice, x, y;
-  const [{plane}] = globals.mv.views;
   $('.cpoint').remove();
   // document.querySelector(".cpoint").remove();
 
-  const {W, H} = mv.dimensions.voxel[plane];
-  for(i=0; i<globals.points.length; i++) {
-    // eslint-disable-next-line new-cap
-    const s = globals.mv.IJK2S(globals.points[i]);
-    switch (plane) {
-    case 'sag': [slice, x, y] = [s[0], s[1], H - 1 - s[2]]; break;
-    case 'cor': [x, slice, y] = [s[0], s[1], H - 1 - s[2]]; break;
-    case 'axi': [x, y, slice] = [s[0], H - 1 - s[1], s[2]]; break;
-    }
+  for(let i=0; i<globals.points.length; i++) {
+    const [x, y, slice] = voxel2screen(globals.points[i]);
     if(slice !== globals.mv.views[0].slice) {
       continue;
     }
-    x = 100*(0.5+x)/W;
-    y = 100*(0.5+y)/H;
-
     const str = `<div class="cpoint" id="cp${i}" data-ijk="${globals.points[i][0]},${globals.points[i][1]},${globals.points[i][2]}" style="left:${x}%;top:${y}%"></div>`;
 
-    // this works:
     $('#viewer .wrap').append(str);
-    // this bugs:
     // document.querySelector('#viewer > .wrap').innerHTML += str;
   }
 };
@@ -225,30 +244,15 @@ const threshold = () => {
 };
 
 const clickOnViewer = (ev) => {
-  const {mv, rbf} = globals;
-  const rect = $('canvas.viewer')[0].getBoundingClientRect();
-  const x = mv.views[0].canvas.width * (ev.clientX - rect.left)/rect.width|0;
-  const y = mv.views[0].canvas.height * (ev.clientY - rect.top)/rect.height|0;
-  const [{slice, plane}] = mv.views;
-  let s;
-  const {H} = mv.dimensions.voxel[plane];
-
-  switch (plane) {
-  case 'sag': s = [slice, x, H - 1 - y]; break;
-  case 'cor': s = [x, slice, H - 1 - y]; break;
-  case 'axi': s = [x, H - 1 - y, slice]; break;
-  }
-  // eslint-disable-next-line new-cap
-  const [i, j, k] = mv.S2IJK(s);
+  const {mv} = globals;
+  const [i, j, k] = screen2voxel(ev);
 
   switch(globals.selectedTool) {
   case 'Select':
-    console.log([i, j, k], rbf([i, j, k]));
     break;
   case 'Add':
     globals.points.push([i, j, k]);
     globals.values.push(127);
-    // initRBF(globals.points, globals.values);
     displayControlPointsTable();
     mv.draw();
     break;
@@ -261,10 +265,13 @@ const selectControlPoint = (cpid) => {
 };
 
 const selectThresholdSlider = (cpid) => {
-  const data = $('#'+cpid).data().ijk;
-  $('tr.selected').removeClass('selected');
-  $(`#control tr input[data-ijk="${data}"]`).closest('tr')
-    .addClass('selected');
+  const data = document.querySelector(`#${cpid}`).dataset.ijk;
+  // $('tr.selected').removeClass('selected');
+  // $(`#control tr input[data-ijk="${data}"]`).closest('tr')
+  //   .addClass('selected');
+  document.querySelector("tr.selected").classList.remove('selected');
+  document.querySelector(`#control tr input[data-ijk="${data}"]`).closest('tr')
+    .classList.add('selected');
 };
 
 /** Handle clicking on a row of the control points table
@@ -273,17 +280,17 @@ const selectThresholdSlider = (cpid) => {
 */
 // eslint-disable-next-line no-unused-vars
 const selectRow = (trSelected) => {
+  // select the row
   document.querySelectorAll('tr.selected').forEach( (tr) => {
     tr.classList.remove('selected');
   });
   trSelected.classList.add('selected');
 
+  // move to the slice
   const {mv} = globals;
   const [{plane}] = mv.views;
   let slice;
-
   const ijk = trSelected.querySelector('input[type="range"]').dataset.ijk.split(',').map((x) => parseInt(x));
-
   switch(plane) {
   case 'sag':
     [slice] = ijk;
@@ -296,6 +303,13 @@ const selectRow = (trSelected) => {
     break;
   }
   mv.setSlice(mv.views[0], slice);
+
+  // select the control point
+  document.querySelectorAll('.cpoint').forEach( (cp) => {
+    cp.classList.remove('selected');
+  });
+  const {cpid} = trSelected.dataset;
+  document.querySelector(`#${cpid}`).classList.add('selected');
 };
 
 /** Handle changes in threshold triggered by the sliders
@@ -318,7 +332,6 @@ const changeThreshold = (ob) => {
       globals.values[i] = val;
     }
   }
-  // initRBF(globals.points, globals.values);
   mv.draw();
   selectControlPoint(cpid);
   selectThresholdSlider(cpid);
@@ -336,52 +349,33 @@ const controlPointMoveHandler = (ev) => {
   const cpid = globals.selectedControlPoint;
   const cpidIndex = cpid.replace("cp", "")|0;
   const {mv} = globals;
-  const rect = $('canvas.viewer')[0].getBoundingClientRect();
-  const x = mv.views[0].canvas.width * (ev.clientX - rect.left)/rect.width|0;
-  const y = mv.views[0].canvas.height * (ev.clientY - rect.top)/rect.height|0;
-  const [{slice, plane}] = mv.views;
-  let s;
-  const {H} = mv.dimensions.voxel[plane];
-
-  switch (plane) {
-  case 'sag': s = [slice, x, H - 1 - y]; break;
-  case 'cor': s = [x, slice, H - 1 - y]; break;
-  case 'axi': s = [x, H - 1 - y, slice]; break;
-  }
-  // eslint-disable-next-line new-cap
-  const [i, j, k] = mv.S2IJK(s);
+  const [i, j, k] = screen2voxel(ev);
 
   globals.points[cpidIndex][0] = i;
   globals.points[cpidIndex][1] = j;
   globals.points[cpidIndex][2] = k;
   displayControlPointsTable();
   mv.draw();
-
-
-  //   if (cpid.match(/cp[\d]+/) === null) {
-  //     return;
-  //   }
-
-  //   if($('#'+cpid).hasClass('selected') === false) {
-  //     console.log("controlPointMoveHandler: not selected");
-  //   }
 };
 
 const controlPointUpHandler = (ev) => {
   console.log("Up");
   const {mv} = globals;
   const cpid = ev.target.id;
-
-  if (cpid.match(/cp[\d]+/) === null) {
-    return;
-  }
+  const match = cpid.match(/cp[\d]+/);
 
   switch(globals.selectedTool) {
   case 'Select':
+    if (match === null) {
+      return;
+    }
     selectControlPoint(cpid);
     selectThresholdSlider(cpid);
     break;
   case 'Remove': {
+    if (match === null) {
+      return;
+    }
     let i;
     const data = $('#'+cpid).data().ijk;
     for(i=globals.points.length-1; i>=0; i--) {
@@ -390,7 +384,6 @@ const controlPointUpHandler = (ev) => {
         globals.values.splice(i, 1);
       }
     }
-    // initRBF(globals.points, globals.values);
     displayControlPointsTable();
     mv.draw();
     break;
@@ -484,7 +477,6 @@ const loadControlPoints = () => {
       const ob = JSON.parse(str);
       globals.points = ob.points;
       globals.values = ob.values;
-      // initRBF(globals.points, globals.values);
       displayControlPointsTable();
       globals.mv.draw();
     };
@@ -551,14 +543,12 @@ const initUI = () => {
 
   displayControlPointsTable();
 
-  globals.mv.draw = function draw() {
-    globals.originalDraw();
-    threshold();
-    displayControlPoints();
-  };
-
-  mv.maxValue *= 1.1;
-  mv.draw();
+  // Display volume info
+  const {dim, pixdim} = mv.mri;
+  document.querySelector("#info").innerHTML = `<b>Information:</b><br />
+  file: ${mv.mri.fileName}<br />
+  dim: ${dim[0]} x ${dim[1]} x ${dim[2]}<br />
+  pixdim: ${pixdim[0].toFixed(2)} x ${pixdim[1].toFixed(2)} x ${pixdim[2].toFixed(2)}<br />`;
 
   // Listen to control point clicks
   $('body').on('mouseup', controlPointUpHandler);
@@ -571,6 +561,15 @@ const initUI = () => {
   document.querySelector("#panels").style.display = "flex";
   $('#tools, #direction, #overlay, #saveMask, #saveControlPoints, #loadControlPoints').show();
   $('#upload-box').removeClass('init');
+
+  globals.mv.draw = function draw() {
+    globals.originalDraw();
+    threshold();
+    displayControlPoints();
+  };
+
+  mv.maxValue *= 1.1;
+  mv.draw();
 
   // Initialise UI
   MUI.chose($('#tools'), (option) => {
