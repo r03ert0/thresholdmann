@@ -9,7 +9,7 @@ const globals = {
   originalDraw: null,
   points: null,
   values: null,
-  rbf: null,
+  interpolate: null,
   selectedControlPoint: null,
   selectedTool: "Select",
   selectedDirection: "SelectUp",
@@ -17,6 +17,11 @@ const globals = {
 };
 window.globals = globals;
 
+/** Interpolation function that creates a continuous
+ * background from a set of control points.
+ * @param {number[]} pos - a voxel coordinate
+ * @returns {number} the interpolated value
+ */
 const interpolation = (pos) => {
   const {points, values} = globals;
   let val = 0;
@@ -33,7 +38,7 @@ const interpolation = (pos) => {
 
   return val / totalw;
 };
-globals.rbf = interpolation;
+globals.interpolate = interpolation;
 
 const displayControlPointsTable = () => {
   let i;
@@ -62,7 +67,7 @@ const displayControlPointsTable = () => {
 
 const screen2voxel = (ev) => {
   const {mv} = globals;
-  const {left, top, width, height} = $('canvas.viewer')[0].getBoundingClientRect();
+  const {left, top, width, height} = document.querySelector('canvas.viewer').getBoundingClientRect();
   const [{slice, plane}] = mv.views;
   const {W, H} = mv.dimensions.voxel[plane];
   const height2 = H * width / W;
@@ -70,7 +75,6 @@ const screen2voxel = (ev) => {
   const x = mv.views[0].canvas.width * (ev.clientX - left)/width|0;
   const y = mv.views[0].canvas.height * (ev.clientY - (top + offset))/height2|0;
   let s;
-  // console.log({width, height, height2, W, H});
 
   switch (plane) {
   case 'sag': s = [slice, x, H - 1 - y]; break;
@@ -90,7 +94,12 @@ const screen2voxel = (ev) => {
  */
 const voxel2screen = (point) => {
   const {mv} = globals;
-  const {width, height: heightLarge} = $('canvas.viewer')[0].getBoundingClientRect();
+
+  // canvas.viewer includes the region containing the brain
+  // but may also contain, in the height, a background region
+  // appearing at the top and bottom. The transformation needs
+  // to take these regions into account.
+  const {width, height: heightLarge} = document.querySelector('canvas.viewer').getBoundingClientRect();
   const [{plane}] = mv.views;
   const {W, H} = mv.dimensions.voxel[plane];
   const height = H * width / W;
@@ -104,6 +113,9 @@ const voxel2screen = (point) => {
   case 'cor': [x, slice, y] = [s[0], s[1], H - 1 - s[2]]; break;
   case 'axi': [x, y, slice] = [s[0], H - 1 - s[1], s[2]]; break;
   }
+
+  // the x and y positions are computed as a proportion of the
+  // larger canvas.
   x = 100 * (0.5 + x) / W;
   y = 100 * (0.5 + y + offset) / Hlarge;
 
@@ -220,8 +232,8 @@ const _setPixelFromValue = (px, ind, val, selectedOverlay) => {
 };
 
 const threshold = () => {
-  const {mv, rbf, selectedOverlay} = globals;
-  if(typeof rbf === 'undefined') {
+  const {mv, interpolate, selectedOverlay} = globals;
+  if(typeof interpolate === 'undefined') {
     return;
   }
 
@@ -237,7 +249,7 @@ const threshold = () => {
       ind = y*width + x;
       _setPixelFromValue(
         // eslint-disable-next-line new-cap
-        px, ind, rbf(mv.S2IJK(s)), selectedOverlay);
+        px, ind, interpolate(mv.S2IJK(s)), selectedOverlay);
     }
   }
   ctx.putImageData(px, 0, 0);
@@ -266,9 +278,6 @@ const selectControlPoint = (cpid) => {
 
 const selectThresholdSlider = (cpid) => {
   const data = document.querySelector(`#${cpid}`).dataset.ijk;
-  // $('tr.selected').removeClass('selected');
-  // $(`#control tr input[data-ijk="${data}"]`).closest('tr')
-  //   .addClass('selected');
   document.querySelector("tr.selected").classList.remove('selected');
   document.querySelector(`#control tr input[data-ijk="${data}"]`).closest('tr')
     .classList.add('selected');
@@ -424,7 +433,7 @@ const saveMask = () => {
  */
 // eslint-disable-next-line no-unused-vars
 const saveMaskOLD = () => {
-  const {mv, rbf} = globals;
+  const {mv, interpolate} = globals;
   const [dim] = mv.mri;
   const data = new Float32Array(dim[0]*dim[1]*dim[2]);
   let val;
@@ -434,7 +443,7 @@ const saveMaskOLD = () => {
     for(j=0; j<dim[1]; j++) {
       for(k=0; k<dim[2]; k++) {
         ijk = k*dim[1]*dim[0] + j*dim[0] + i;
-        val = rbf([i, j, k])*mv.maxValue/255;
+        val = interpolate([i, j, k])*mv.maxValue/255;
 
         if(mv.mri.data[ijk] <= val) {
           data[ijk] = 0;
@@ -572,7 +581,7 @@ const initUI = () => {
   mv.draw();
 
   // Initialise UI
-  MUI.chose($('#tools'), (option) => {
+  MUI.chose(document.querySelector('#tools'), (option) => {
     globals.selectedTool = option;
     switch(globals.selectedTool) {
     case "Add":
@@ -581,7 +590,7 @@ const initUI = () => {
       break;
     }
   });
-  MUI.chose($('#direction'), (option) => {
+  MUI.chose(document.querySelector('#direction'), (option) => {
     globals.selectedDirection = option;
     switch(globals.selectedDirection) {
     case "SelectUp":
@@ -593,13 +602,13 @@ const initUI = () => {
     }
     mv.draw();
   });
-  MUI.chose($('#overlay'), (option) => {
+  MUI.chose(document.querySelector('#overlay'), (option) => {
     globals.selectedOverlay = option;
     globals.mv.draw();
   });
-  MUI.push($('#saveMask'), saveMask);
-  MUI.push($('#saveControlPoints'), saveControlPoints);
-  MUI.push($('#loadControlPoints'), loadControlPoints);
+  MUI.push(document.querySelector('#saveMask'), saveMask);
+  MUI.push(document.querySelector('#saveControlPoints'), saveControlPoints);
+  MUI.push(document.querySelector('#loadControlPoints'), loadControlPoints);
 
   _newPlaneSelectionUI();
 };

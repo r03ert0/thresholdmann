@@ -41,8 +41,6 @@ const thresholdMRI = (params) => {
 
 const runThreshold = (params) => {
   self.postMessage({msg: "thresholding..."});
-  // importScripts('rbf/node_modules/numeric/numeric-1.2.6.min.js');
-  // importScripts('rbf/index.js');
   const mask = thresholdMRI(params);
   self.postMessage({msg: "success", mask: mask}, [mask.buffer]);
 };
