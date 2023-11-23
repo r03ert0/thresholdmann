@@ -155,27 +155,18 @@ const saveNifti = (data) => {
   }
 };
 
-/** Threshold a complete 3D image volume in a web worker
- * @returns {void}
-*/
-const thresholdJob = () => {
+const thresholdWorker = (callback) => {
   const worker = new Worker("thresholdmann-worker.js");
   worker.onmessage = function(e) {
     var {msg} = e.data;
     switch(msg) {
     case 'success':
       console.log("Worker finished");
-      var data = e.data.mask;
-      saveNifti(data);
-      document.querySelector("#progress").innerText = 'Done';
-      setTimeout( () => {
-        document.querySelector("#progress").innerText = "";
-        document.querySelector("#progress").style.display = "none";
-      }, 2000);
-      break;
+
+      return callback(e.data.mask);
     case 'progress': {
       const v = e.data.value.split(',').map( (x) => parseInt(x) );
-      document.querySelector("#progress").innerText = `Saving ${v[0]+1} out of ${v[1]}`;
+      document.querySelector("#progress").innerText = `Thresholding ${v[0]+1} out of ${v[1]}`;
       break;
     }
     default:
@@ -194,6 +185,20 @@ const thresholdJob = () => {
     directionUp: (globals.selectedDirection === "SelectUp")
   };
   worker.postMessage(params);
+};
+
+/** Threshold a complete 3D image volume in a web worker
+ * @returns {void}
+*/
+const thresholdJob = () => {
+  thresholdWorker((data) => {
+    saveNifti(data);
+    document.querySelector("#progress").innerText = 'Done';
+    setTimeout( () => {
+      document.querySelector("#progress").innerText = "";
+      document.querySelector("#progress").style.display = "none";
+    }, 2000);
+  });
 };
 
 const _screenCoord = (plane, x, y, slice, H) => {
@@ -606,6 +611,7 @@ const initUI = () => {
     globals.selectedOverlay = option;
     globals.mv.draw();
   });
+  MUI.push(document.querySelector('#render3D'), render3D);
   MUI.push(document.querySelector('#saveMask'), saveMask);
   MUI.push(document.querySelector('#saveControlPoints'), saveControlPoints);
   MUI.push(document.querySelector('#loadControlPoints'), loadControlPoints);
@@ -670,6 +676,22 @@ const initWithPath = async (path) => {
   _newMRIViewer({path});
   await _display();
   initUI();
+};
+
+const render3D = () => {
+  // puts a fresh version of the segmentation in localStorage
+  thresholdWorker((data) => {
+    document.querySelector("#progress").innerText = 'Done';
+    setTimeout( () => {
+      document.querySelector("#progress").innerText = "";
+      document.querySelector("#progress").style.display = "none";
+    }, 2000);
+
+    const dim = new Uint16Array([...globals.mv.mri.dim, 0]);
+    const blob = new Blob([dim, data]);
+    localStorage.thresholdmann = URL.createObjectURL(blob);
+    window.open('/render3D/index.html', 'Render 3D', 'width=800,height=600');
+  });
 };
 
 console.log(`
