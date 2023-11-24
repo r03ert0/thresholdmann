@@ -484,7 +484,7 @@ const loadControlPoints = () => {
   var input = document.createElement("input");
   input.type = "file";
   input.onchange = () => {
-    const [file] = this.files;
+    const [file] = input.files;
     const reader = new FileReader();
     reader.onload = (ev) => {
       const str = ev.target.result;
@@ -539,6 +539,22 @@ const _newPlaneSelectionUI = () => {
     axiBtn.classList.remove('active');
     corBtn.classList.add('active');
     mv.configureSliders();
+  });
+};
+
+const render3D = () => {
+  // puts a fresh version of the segmentation in localStorage
+  thresholdWorker((data) => {
+    document.querySelector("#progress").innerText = 'Done';
+    setTimeout( () => {
+      document.querySelector("#progress").innerText = "";
+      document.querySelector("#progress").style.display = "none";
+    }, 2000);
+
+    const dim = new Uint16Array([...globals.mv.mri.dim, 0]);
+    const blob = new Blob([dim, data]);
+    localStorage.thresholdmann = URL.createObjectURL(blob);
+    window.open('./render3D/index.html', 'Render 3D', 'width=800,height=600');
   });
 };
 
@@ -677,26 +693,3 @@ const initWithPath = async (path) => {
   await _display();
   initUI();
 };
-
-const render3D = () => {
-  // puts a fresh version of the segmentation in localStorage
-  thresholdWorker((data) => {
-    document.querySelector("#progress").innerText = 'Done';
-    setTimeout( () => {
-      document.querySelector("#progress").innerText = "";
-      document.querySelector("#progress").style.display = "none";
-    }, 2000);
-
-    const dim = new Uint16Array([...globals.mv.mri.dim, 0]);
-    const blob = new Blob([dim, data]);
-    localStorage.thresholdmann = URL.createObjectURL(blob);
-    window.open('/render3D/index.html', 'Render 3D', 'width=800,height=600');
-  });
-};
-
-console.log(`
-THRESHOLDMANN
-to do:
-- add a 3d render
-- tests
-`);
