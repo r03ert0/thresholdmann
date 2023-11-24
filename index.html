@@ -194,24 +194,29 @@
 
     <script>
       let file = false;
-      $(".box")
-      .on("drag dragstart dragend dragover dragenter dragleave drop", function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-      })
-      .on("dragover dragenter", function() {
-        $(".box").addClass("is-dragover");
-      })
-      .on("dragleave dragend drop", function() {
-        $(".box").removeClass("is-dragover");
-      })
-      .on("drop", function(e) {
-        file = e.originalEvent.dataTransfer.files;
-        if ($(".box").hasClass("is-uploading")) {
-
+      for (const event of ["drag", "dragstart", "dragend", "dragover", "dragenter", "dragleave", "drop"]) {
+        document.querySelector("#upload-box").addEventListener(event, function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      }
+      for (const event of ["dragover", "dragenter"]) {
+        document.querySelector("#upload-box").addEventListener(event, function(e) {
+          document.querySelector("#upload-box").classList.add("is-dragover");
+        });
+      }
+      for (const event of ["dragleave", "dragend", "drop"]) {
+        document.querySelector("#upload-box").addEventListener(event, function(e) {
+          document.querySelector("#upload-box").classList.remove("is-dragover");
+        });
+      }
+      document.querySelector("#upload-box").addEventListener("drop", function(e) {
+        file = e.dataTransfer.files;
+        if (document.querySelector("#upload-box").classList.contains("is-uploading")) {
           return false;
         }
-        $(".box").addClass("is-uploading").removeClass("is-error");
+        document.querySelector("#upload-box").classList.add("is-uploading");
+        document.querySelector("#upload-box").classList.remove("is-error");
         e.preventDefault();
         if (file) {
           console.log(file[0]);
@@ -219,7 +224,7 @@
         }
       });
 
-      MUI.push($('#loadNifti'), loadNifti);
+      MUI.push(document.querySelector('#loadNifti'), loadNifti);
   </script>
 
   </body>
