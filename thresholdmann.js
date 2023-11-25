@@ -65,6 +65,23 @@ const displayControlPointsTable = () => {
   document.querySelector('#control table tbody').innerHTML = str;
 };
 
+const _slice2volume = (plane, x, y, slice, H) => {
+  let s;
+  switch(plane) {
+  case 'sag':
+    s = [slice, x, H - 1 - y];
+    break;
+  case 'cor':
+    s = [x, slice, H - 1 - y];
+    break;
+  case 'axi':
+    s = [x, H - 1 - y, slice];
+    break;
+  }
+
+  return s;
+};
+
 const screen2voxel = (ev) => {
   const {mv} = globals;
   const {left, top, width, height} = document.querySelector('canvas.viewer').getBoundingClientRect();
@@ -122,6 +139,51 @@ const voxel2screen = (point) => {
   return [x, y, slice];
 };
 
+const canvas2voxel = (ev) => {
+  const {mv} = globals;
+  const {left, top, width, height} = document.querySelector('canvas.viewer').getBoundingClientRect();
+  const [{slice, plane}] = mv.views;
+  const {W, H} = mv.dimensions.voxel[plane];
+  const height2 = H * width / W;
+  const offset = (height - height2)/2;
+  const x = mv.views[0].canvas.width * (ev.clientX - left)/width|0;
+  const y = mv.views[0].canvas.height * (ev.clientY - (top + offset))/height2|0;
+
+  const s = _slice2volume(plane, x, y, slice, H);
+
+  return s;
+};
+
+const voxel2canvas = (point) => {
+  const {mv} = globals;
+
+  // canvas.viewer includes the region containing the brain
+  // but may also contain, in the height, a background region
+  // appearing at the top and bottom. The transformation needs
+  // to take these regions into account.
+  const {width, height: heightLarge} = document.querySelector('canvas.viewer').getBoundingClientRect();
+  const [{plane}] = mv.views;
+  const {W, H} = mv.dimensions.voxel[plane];
+  const height = H * width / W;
+  const Hlarge = H * heightLarge / height;
+  const offset = (Hlarge - H)/2;
+  // eslint-disable-next-line new-cap
+  const [i, j, k] = point;
+  let slice, x, y;
+  switch (plane) {
+  case 'sag': [slice, x, y] = [i, j, H - 1 - k]; break;
+  case 'cor': [x, slice, y] = [i, j, H - 1 - k]; break;
+  case 'axi': [x, y, slice] = [i, H - 1 - j, k]; break;
+  }
+
+  // the x and y positions are computed as a proportion of the
+  // larger canvas.
+  x = 100 * (0.5 + x) / W;
+  y = 100 * (0.5 + y + offset) / Hlarge;
+
+  return [x, y, slice];
+};
+
 const displayControlPoints = () => {
   if(typeof globals.points === 'undefined') {
     return;
@@ -131,7 +193,7 @@ const displayControlPoints = () => {
   // document.querySelector(".cpoint").remove();
 
   for(let i=0; i<globals.points.length; i++) {
-    const [x, y, slice] = voxel2screen(globals.points[i]);
+    const [x, y, slice] = voxel2canvas(globals.points[i]);
     if(slice !== globals.mv.views[0].slice) {
       continue;
     }
@@ -201,22 +263,7 @@ const thresholdJob = () => {
   });
 };
 
-const _screenCoord = (plane, x, y, slice, H) => {
-  let s;
-  switch(plane) {
-  case 'sag':
-    s = [slice, x, H - 1 - y];
-    break;
-  case 'cor':
-    s = [x, slice, H - 1 - y];
-    break;
-  case 'axi':
-    s = [x, H - 1 - y, slice];
-    break;
-  }
 
-  return s;
-};
 
 const _setPixelFromValue = (px, ind, val, selectedOverlay) => {
   const g = px.data[4*ind+0];
@@ -250,11 +297,11 @@ const threshold = () => {
   const px = ctx.getImageData(0, 0, width, height);
   for(x=0; x<W; x++) {
     for(y=0; y<H; y++) {
-      s = _screenCoord(plane, x, y, slice, H);
+      s = _slice2volume(plane, x, y, slice, H);
       ind = y*width + x;
       _setPixelFromValue(
         // eslint-disable-next-line new-cap
-        px, ind, interpolate(mv.S2IJK(s)), selectedOverlay);
+        px, ind, interpolate(/*mv.S2IJK(s)*/s), selectedOverlay);
     }
   }
   ctx.putImageData(px, 0, 0);
@@ -262,7 +309,7 @@ const threshold = () => {
 
 const clickOnViewer = (ev) => {
   const {mv} = globals;
-  const [i, j, k] = screen2voxel(ev);
+  const [i, j, k] = canvas2voxel(ev);
 
   switch(globals.selectedTool) {
   case 'Select':
@@ -294,13 +341,13 @@ const selectThresholdSlider = (cpid) => {
 */
 // eslint-disable-next-line no-unused-vars
 const selectRow = (trSelected) => {
-  // select the row
+  // select the table row
   document.querySelectorAll('tr.selected').forEach( (tr) => {
     tr.classList.remove('selected');
   });
   trSelected.classList.add('selected');
 
-  // move to the slice
+  // set the slice
   const {mv} = globals;
   const [{plane}] = mv.views;
   let slice;
@@ -318,12 +365,17 @@ const selectRow = (trSelected) => {
   }
   mv.setSlice(mv.views[0], slice);
 
+  // move the slider
+  document.querySelector("input.slice").value = slice;
+
   // select the control point
   document.querySelectorAll('.cpoint').forEach( (cp) => {
     cp.classList.remove('selected');
   });
   const {cpid} = trSelected.dataset;
-  document.querySelector(`#${cpid}`).classList.add('selected');
+  if (document.querySelector(`#${cpid}`)) {
+    document.querySelector(`#${cpid}`).classList.add('selected');
+  }
 };
 
 /** Handle changes in threshold triggered by the sliders
@@ -363,7 +415,7 @@ const controlPointMoveHandler = (ev) => {
   const cpid = globals.selectedControlPoint;
   const cpidIndex = cpid.replace("cp", "")|0;
   const {mv} = globals;
-  const [i, j, k] = screen2voxel(ev);
+  const [i, j, k] = canvas2voxel(ev);
 
   globals.points[cpidIndex][0] = i;
   globals.points[cpidIndex][1] = j;
