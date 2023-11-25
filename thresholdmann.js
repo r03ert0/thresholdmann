@@ -53,12 +53,12 @@ const displayControlPointsTable = () => {
   let str = "";
   for(i=0; i<points.length; i++) {
     str += `
-<tr onclick="selectRow(this)" data-cpid="cp${i}" ${(cpidIndex === i)?'class="selected"':''}>
+<tr onclick="selectRow(this)" data-cpid="cp${i}" data-ijk="${points[i][0]},${points[i][1]},${points[i][2]}" ${(cpidIndex === i)?'class="selected"':''}>
   <td class="ijk">${points[i][0]}</td>
   <td class="ijk">${points[i][1]}</td>
   <td class="ijk">${points[i][2]}</td>
-  <td class="slider-val"><input type="range" step='any' min=0 max=255 data-ijk="${points[i][0]},${points[i][1]},${points[i][2]}" value=${values[i]} oninput="changeThreshold(this)"/></td>
-  <td class="text-val"><input class="value" min=0 max=255 value="${values[i].toFixed(0)}" /></td>
+  <td class="slider-val"><input type="range" step='any' min=0 max=255 value=${values[i]} oninput="changeThreshold(this)"/></td>
+  <td class="text-val"><input type="text" class="value" min=0 max=255 value="${values[i].toFixed(0)}" onchange="inputThreshold(this)"/></td>
 </tr>
 `;
   }
@@ -329,9 +329,11 @@ const selectControlPoint = (cpid) => {
 };
 
 const selectThresholdSlider = (cpid) => {
-  const data = document.querySelector(`#${cpid}`).dataset.ijk;
-  document.querySelector("tr.selected").classList.remove('selected');
-  document.querySelector(`#control tr input[data-ijk="${data}"]`).closest('tr')
+  const {ijk} = document.querySelector(`#${cpid}`).dataset;
+  if (document.querySelector("tr.selected")) {
+    document.querySelector("tr.selected").classList.remove('selected');
+  }
+  document.querySelector(`#control tr[data-ijk="${ijk}"]`)
     .classList.add('selected');
 };
 
@@ -351,7 +353,7 @@ const selectRow = (trSelected) => {
   const {mv} = globals;
   const [{plane}] = mv.views;
   let slice;
-  const ijk = trSelected.querySelector('input[type="range"]').dataset.ijk.split(',').map((x) => parseInt(x));
+  const ijk = trSelected.dataset.ijk.split(',').map((x) => parseInt(x));
   switch(plane) {
   case 'sag':
     [slice] = ijk;
@@ -387,10 +389,32 @@ const selectRow = (trSelected) => {
 const changeThreshold = (ob) => {
   const {mv} = globals;
   const val = parseFloat(ob.value);
-  const data = $(ob).data().ijk;
-  const cpid = $(`[data-ijk="${data}"]`).attr('id');
+  const tr = ob.closest('tr');
+  const data = tr.dataset.ijk;
+  const cpid = document.querySelector(`div.cpoint[data-ijk="${data}"]`).id;
 
-  ob.parentElement.nextElementSibling.querySelector("input").value = val.toFixed(0);
+  tr.querySelector("input[type=text]").value = val.toFixed(0);
+
+  let i;
+  for(i=globals.points.length-1; i>=0; i--) {
+    if(data === globals.points[i][0]+','+globals.points[i][1]+','+globals.points[i][2]) {
+      globals.values[i] = val;
+    }
+  }
+  mv.draw();
+  selectControlPoint(cpid);
+  selectThresholdSlider(cpid);
+};
+
+// eslint-disable-next-line no-unused-vars
+const inputThreshold = (ob) => {
+  const {mv} = globals;
+  const val = parseFloat(ob.value);
+  const tr = ob.closest('tr');
+  const data = tr.dataset.ijk;
+  const cpid = document.querySelector(`div.cpoint[data-ijk="${data}"]`).id;
+
+  tr.querySelector("input[type=range]").value = val.toFixed(0);
 
   let i;
   for(i=globals.points.length-1; i>=0; i--) {
