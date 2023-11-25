@@ -38,6 +38,7 @@ html, body {
   font-family: 'Montserrat', sans-serif;
   font-size: var(--normal-font-size);
   font-weight: 200;
+  line-height: 1.5;
 }
 .cpoint {
   position: absolute;
