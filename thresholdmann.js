@@ -82,63 +82,6 @@ const _slice2volume = (plane, x, y, slice, H) => {
   return s;
 };
 
-const screen2voxel = (ev) => {
-  const {mv} = globals;
-  const {left, top, width, height} = document.querySelector('canvas.viewer').getBoundingClientRect();
-  const [{slice, plane}] = mv.views;
-  const {W, H} = mv.dimensions.voxel[plane];
-  const height2 = H * width / W;
-  const offset = (height - height2)/2;
-  const x = mv.views[0].canvas.width * (ev.clientX - left)/width|0;
-  const y = mv.views[0].canvas.height * (ev.clientY - (top + offset))/height2|0;
-  let s;
-
-  switch (plane) {
-  case 'sag': s = [slice, x, H - 1 - y]; break;
-  case 'cor': s = [x, slice, H - 1 - y]; break;
-  case 'axi': s = [x, H - 1 - y, slice]; break;
-  }
-
-  // eslint-disable-next-line new-cap
-  return mv.S2IJK(s);
-};
-
-/** Convert a voxel coordinate to a screen coordinate.
- * The screen coordinate is expressed in percentage of the
- * width and height of the MRI canvas.
- * @param {number[]} point - the voxel coordinate
- * @returns {number[]} the screen coordinate
- */
-const voxel2screen = (point) => {
-  const {mv} = globals;
-
-  // canvas.viewer includes the region containing the brain
-  // but may also contain, in the height, a background region
-  // appearing at the top and bottom. The transformation needs
-  // to take these regions into account.
-  const {width, height: heightLarge} = document.querySelector('canvas.viewer').getBoundingClientRect();
-  const [{plane}] = mv.views;
-  const {W, H} = mv.dimensions.voxel[plane];
-  const height = H * width / W;
-  const Hlarge = H * heightLarge / height;
-  const offset = (Hlarge - H)/2;
-  // eslint-disable-next-line new-cap
-  const s = globals.mv.IJK2S(point);
-  let slice, x, y;
-  switch (plane) {
-  case 'sag': [slice, x, y] = [s[0], s[1], H - 1 - s[2]]; break;
-  case 'cor': [x, slice, y] = [s[0], s[1], H - 1 - s[2]]; break;
-  case 'axi': [x, y, slice] = [s[0], H - 1 - s[1], s[2]]; break;
-  }
-
-  // the x and y positions are computed as a proportion of the
-  // larger canvas.
-  x = 100 * (0.5 + x) / W;
-  y = 100 * (0.5 + y + offset) / Hlarge;
-
-  return [x, y, slice];
-};
-
 const canvas2voxel = (ev) => {
   const {mv} = globals;
   const {left, top, width, height} = document.querySelector('canvas.viewer').getBoundingClientRect();
@@ -154,6 +97,12 @@ const canvas2voxel = (ev) => {
   return s;
 };
 
+/** Convert a voxel coordinate to a screen coordinate.
+ * The screen coordinate is expressed in percentage of the
+ * width and height of the MRI canvas.
+ * @param {number[]} point - the voxel coordinate
+ * @returns {number[]} the screen coordinate
+ */
 const voxel2canvas = (point) => {
   const {mv} = globals;
 
@@ -262,8 +211,6 @@ const thresholdJob = () => {
     }, 2000);
   });
 };
-
-
 
 const _setPixelFromValue = (px, ind, val, selectedOverlay) => {
   const g = px.data[4*ind+0];
@@ -536,7 +483,6 @@ const saveMaskOLD = () => {
   }
   saveNifti(data);
 };
-
 
 const saveControlPoints = () => {
   var a = document.createElement('a');
