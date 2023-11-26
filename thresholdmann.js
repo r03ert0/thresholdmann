@@ -10,6 +10,7 @@ const globals = {
   points: null,
   values: null,
   interpolate: null,
+  prevValue: null, // previous value of the threshold configured by the user
   selectedControlPoint: null,
   selectedTool: "Select",
   selectedDirection: "SelectUp",
@@ -24,8 +25,12 @@ window.globals = globals;
  */
 const interpolation = (pos) => {
   const {points, values} = globals;
+  const backgroundValue = 255;
+  const wBackground = 0.00001;
   let val = 0;
   let totalw = 0;
+
+  // value from control points
   for (let k=0; k<points.length; k++) {
     const d =
       (pos[0] - points[k][0]) ** 2 +
@@ -36,14 +41,16 @@ const interpolation = (pos) => {
     totalw += w;
   }
 
+  // value from background
+  val += wBackground * backgroundValue;
+  totalw += wBackground;
+
   return val / totalw;
 };
 globals.interpolate = interpolation;
 
 const displayControlPointsTable = () => {
-  let i;
-  const {points, values} = globals;
-  const cpid = globals.selectedControlPoint;
+  const {points, values, selectedControlPoint: cpid} = globals;
   let cpidIndex = -1;
   if (cpid) {
     cpidIndex = globals.selectedControlPoint.replace("cp", "")|0;
@@ -51,21 +58,26 @@ const displayControlPointsTable = () => {
 
   // display control point table
   let str = "";
-  for(i=0; i<points.length; i++) {
+  for(let ind=0; ind < points.length; ind++) {
+    const [i, j, k] = points[ind];
     str += `
-<tr onclick="selectRow(this)" data-cpid="cp${i}" data-ijk="${points[i][0]},${points[i][1]},${points[i][2]}" ${(cpidIndex === i)?'class="selected"':''}>
-  <td class="ijk">${points[i][0]}</td>
-  <td class="ijk">${points[i][1]}</td>
-  <td class="ijk">${points[i][2]}</td>
-  <td class="slider-val"><input type="range" step='any' min=0 max=255 value=${values[i]} oninput="changeThreshold(this)"/></td>
-  <td class="text-val"><input type="text" class="value" min=0 max=255 value="${values[i].toFixed(0)}" onchange="inputThreshold(this)"/></td>
+<tr onclick="selectRow(this)" data-cpid="cp${i}" data-ijk="${i},${j},${k}" ${(cpidIndex === ind)?'class="selected"':''}>
+  <td class="ijk">${i}</td>
+  <td class="ijk">${j}</td>
+  <td class="ijk">${k}</td>
+  <td class="slider-val">
+    <input type="range" step="any" min=0 max=255 value=${values[ind]} oninput="changeThreshold(event)"/>
+  </td>
+  <td class="text-val">
+    <input type="text" class="value" min=0 max=255 value="${values[ind].toFixed(0)}" onchange="inputThreshold(this)"/>
+  </td>
 </tr>
 `;
   }
   document.querySelector('#control table tbody').innerHTML = str;
 };
 
-const _slice2volume = (plane, x, y, slice, H) => {
+const slice2volume = (plane, x, y, slice, H) => {
   let s;
   switch(plane) {
   case 'sag':
@@ -92,7 +104,7 @@ const canvas2voxel = (ev) => {
   const x = mv.views[0].canvas.width * (ev.clientX - left)/width|0;
   const y = mv.views[0].canvas.height * (ev.clientY - (top + offset))/height2|0;
 
-  const s = _slice2volume(plane, x, y, slice, H);
+  const s = slice2volume(plane, x, y, slice, H);
 
   return s;
 };
@@ -159,7 +171,12 @@ const displayControlPoints = () => {
  */
 const saveNifti = (data) => {
   const {mv} = globals;
-  const niigz = mv.mri.createNifti(mv.mri.dim, mv.mri.pixdim, mv.mri.vox2mm(), data);
+  const niigz = mv.mri.createNifti(
+    mv.mri.dim,
+    mv.mri.pixdim,
+    mv.mri.vox2mm(),
+    new Uint16Array(data)
+  );
   const name = prompt("Save mask as...", "mask.nii.gz");
   if(name !== null) {
     mv.mri.saveNifti(niigz, name);
@@ -244,7 +261,7 @@ const threshold = () => {
   const px = ctx.getImageData(0, 0, width, height);
   for(x=0; x<W; x++) {
     for(y=0; y<H; y++) {
-      s = _slice2volume(plane, x, y, slice, H);
+      s = slice2volume(plane, x, y, slice, H);
       ind = y*width + x;
       _setPixelFromValue(
         // eslint-disable-next-line new-cap
@@ -254,18 +271,34 @@ const threshold = () => {
   ctx.putImageData(px, 0, 0);
 };
 
-const clickOnViewer = (ev) => {
+const selectThresholdSlider = (cpid) => {
+  const {ijk} = document.querySelector(`#${cpid}`).dataset;
+  if (document.querySelector("tr.selected")) {
+    document.querySelector("tr.selected").classList.remove('selected');
+  }
+  const trSelected = document.querySelector(`#control tr[data-ijk="${ijk}"]`);
+  trSelected.classList.add('selected');
+  trSelected.scrollIntoView();
+};
+
+const addControlPoint = (i, j, k) => {
   const {mv} = globals;
+  globals.points.push([i, j, k]);
+  globals.values.push(globals.prevValue);
+  displayControlPointsTable();
+  globals.selectedControlPoint = "cp" + (globals.points.length-1);
+  mv.draw();
+  selectThresholdSlider(globals.selectedControlPoint);
+};
+
+const clickOnViewer = (ev) => {
   const [i, j, k] = canvas2voxel(ev);
 
   switch(globals.selectedTool) {
   case 'Select':
     break;
   case 'Add':
-    globals.points.push([i, j, k]);
-    globals.values.push(127);
-    displayControlPointsTable();
-    mv.draw();
+    addControlPoint(i, j, k);
     break;
   }
 };
@@ -275,14 +308,7 @@ const selectControlPoint = (cpid) => {
   $('#'+cpid).addClass('selected');
 };
 
-const selectThresholdSlider = (cpid) => {
-  const {ijk} = document.querySelector(`#${cpid}`).dataset;
-  if (document.querySelector("tr.selected")) {
-    document.querySelector("tr.selected").classList.remove('selected');
-  }
-  document.querySelector(`#control tr[data-ijk="${ijk}"]`)
-    .classList.add('selected');
-};
+
 
 /** Handle clicking on a row of the control points table
  * @param {HTMLElement} trSelected - the row element
@@ -333,12 +359,14 @@ const selectRow = (trSelected) => {
  * @returns {void}
  */
 // eslint-disable-next-line no-unused-vars
-const changeThreshold = (ob) => {
+const changeThreshold = (ev) => {
+  ev.preventDefault();
+
+  const el = ev.target;
   const {mv} = globals;
-  const val = parseFloat(ob.value);
-  const tr = ob.closest('tr');
+  const val = parseFloat(el.value);
+  const tr = el.closest('tr');
   const data = tr.dataset.ijk;
-  const cpid = document.querySelector(`div.cpoint[data-ijk="${data}"]`).id;
 
   tr.querySelector("input[type=text]").value = val.toFixed(0);
 
@@ -346,11 +374,17 @@ const changeThreshold = (ob) => {
   for(i=globals.points.length-1; i>=0; i--) {
     if(data === globals.points[i][0]+','+globals.points[i][1]+','+globals.points[i][2]) {
       globals.values[i] = val;
+      globals.prevValue = val;
     }
   }
   mv.draw();
-  selectControlPoint(cpid);
-  selectThresholdSlider(cpid);
+
+  const cpel = document.querySelector(`div.cpoint[data-ijk="${data}"]`);
+  if (cpel) {
+    const cpid = cpel.id;
+    selectControlPoint(cpid);
+    selectThresholdSlider(cpid);
+  }
 };
 
 // eslint-disable-next-line no-unused-vars
@@ -367,6 +401,7 @@ const inputThreshold = (ob) => {
   for(i=globals.points.length-1; i>=0; i--) {
     if(data === globals.points[i][0]+','+globals.points[i][1]+','+globals.points[i][2]) {
       globals.values[i] = val;
+      globals.prevValue = val;
     }
   }
   mv.draw();
@@ -580,6 +615,34 @@ const render3D = () => {
   });
 };
 
+const initKeyboardShortcuts = () => {
+  document.addEventListener('keydown', (ev) => {
+    const {key} = ev;
+    switch(key) {
+    case 's':
+      globals.selectedTool = 'Select';
+      document.querySelector('#tools').querySelector(".mui-pressed").classList.remove("mui-pressed");
+      document.querySelector('#tools').querySelector(`[title="Select"`).classList.add("mui-pressed");
+      break;
+    case 'a':
+      globals.selectedTool = 'Add';
+      document.querySelector('#tools').querySelector(".mui-pressed").classList.remove("mui-pressed");
+      document.querySelector('#tools').querySelector(`[title="Add"`).classList.add("mui-pressed");
+      break;
+    case 'r':
+      globals.selectedTool = 'Remove';
+      document.querySelector('#tools').querySelector(".mui-pressed").classList.remove("mui-pressed");
+      document.querySelector('#tools').querySelector(`[title="Remove"`).classList.add("mui-pressed");
+      break;
+    case 'm':
+      globals.selectedTool = 'Move';
+      document.querySelector('#tools').querySelector(".mui-pressed").classList.remove("mui-pressed");
+      document.querySelector('#tools').querySelector(`[title="Move"`).classList.add("mui-pressed");
+      break;
+    }
+  });
+};
+
 const initUI = () => {
   const {mv} = globals;
 
@@ -592,15 +655,16 @@ const initUI = () => {
     ]
   ];
   globals.values = [127];
+  globals.prevValue = 127;
 
   displayControlPointsTable();
 
   // Display volume info
   const {dim, pixdim} = mv.mri;
-  document.querySelector("#info").innerHTML = `<b>Information:</b><br />
-  file: ${mv.mri.fileName}<br />
-  dim: ${dim[0]} x ${dim[1]} x ${dim[2]}<br />
-  pixdim: ${pixdim[0].toFixed(2)} x ${pixdim[1].toFixed(2)} x ${pixdim[2].toFixed(2)}<br />`;
+  document.querySelector("#info").innerHTML = `<b>Information</b><br />
+  <b>file:</b> ${mv.mri.fileName}<br />
+  <b>dim:</b> ${dim[0]} x ${dim[1]} x ${dim[2]}<br />
+  <b>pixdim:</b> ${pixdim[0].toFixed(2)} x ${pixdim[1].toFixed(2)} x ${pixdim[2].toFixed(2)}<br />`;
 
   // Listen to control point clicks
   $('body').on('mouseup', controlPointUpHandler);
@@ -655,6 +719,9 @@ const initUI = () => {
   MUI.push(document.querySelector('#loadControlPoints'), loadControlPoints);
 
   _newPlaneSelectionUI();
+
+  // init keyboard shortcuts
+  initKeyboardShortcuts();
 };
 
 const _newMRIViewer = ({file, path}) => {
