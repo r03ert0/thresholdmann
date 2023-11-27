@@ -71,7 +71,7 @@
         <a href="https://github.com/neuroanatomy/thresholdmann" target="_blank"><img id="github" class="button" title="join our github project" style="width:15px;height:15px" src="img/github.svg"/></a>
       </div>
 
-      <!-- SLeft-top logo -->
+      <!-- Left-top logo -->
       <div style="display:inline-block;margin:10px">
         <a href="/" style="text-decoration:none">
           <span style="font-family: 'Montserrat', sans-serif;color:white;font-size:24px">Thresholdmann</span>
@@ -85,21 +85,28 @@
       <div class="doc">
         <h1>Documentation</h1>
         <p>
-          <b>Load & navigate data.</b> To load your data, simply drag and drop your nifti volume (.nii.gz or .nii) onto the upload box. Your MRI will appear in a stereotaxic viewer. Navigate through slices using the slider below the viewer and switch view planes using the buttons.
-        </p>
-        <p>
-          <b>Add control points.</b> The viewer is initialised with one control point at the center of the MRI volume. To add another control point, select the Add tool in the left panel, and click in the desired position in the viewer. This produces a space-varying threshold obtained through radial
-          basis function interpolation. You can then adjust the local threshold.
+          <b>Load & navigate data.</b> To load your data, simply drag and drop your nifti volume (.nii.gz or .nii) onto the upload box. Your MRI will appear in a stereotaxic viewer with an initial threshold mask overlayed. Navigate through slices using the slider below the viewer and switch view planes using the buttons.
         </p>
         <p>
           <b>Adjust threshold value.</b> Each local threshold can be adjusted in real time using its corresponding slider.
           The viewer is updated in real-time.
         </p>
         <p>
-          <b>Select a control point.</b> Click the Select tool in the left panel and then in the viewer click on the control point you want to select. Its corresponding threshold slider will be selected automatically.
+          <b>Select the direction of thresholding.</b> Depending on your imaging modality and the mask you would like to create, set the threshold direction according to the grey value gradient that fits your needs. 
+          The viewer is updated in real-time.
         </p>
         <p>
-          <b>Remove a control point.</b> Select the Remove tool in the left panel and then in the viewer click on the control point you want to remove.
+          <b>Add control points.</b> The viewer is initialised with one control point at the center of the MRI volume. To add another control point, select the Add tool in the left panel (shortcut A), and click in the desired position in the viewer. This produces a space-varying threshold obtained through radial basis function interpolation. You can then adjust the local threshold.
+        </p>
+        <p>
+          <b>Select a control point.</b> Click the Select tool in the left panel (shortcut S) and then in the viewer click on the control point you want to select. Its corresponding threshold slider will be selected automatically.
+          Vice versa, selecting a slider will automatically select the corresponding control point and jump to the corresponding slice in the viewer. 
+        </p>
+        <p>
+          <b>Remove a control point.</b> Select the Remove tool in the left panel (shortcut R) and then in the viewer click on the control point you want to remove.
+        </p>
+        <p>
+          <b>3D render.</b> Select the 3D render tool in the left panel to compute the 3D model of your mask on the fly and view it in an interactive 3D viewer. It will open in a separate browser window where you can zoom in and out and rotate the 3D object for inspection.
         </p>
         <p>
           <b>Saving.</b> Save the control points together with your mask nifti volume for a fully reproducible workflow.<br />
@@ -114,6 +121,9 @@
         </p>
         <p>
           <b>Load new MRI file.</b> Simply reload the webpage to start working with a new MRI.<br />
+        </p>
+        <p>
+          <b>Reproduce the workflow offline.</b> Once you downloaded the control points, you will be able to reproduce the thresholded mask volume using the <a href="https://github.com/neuroanatomy/thresholdmann/blob/master/thresholdmann.py" style="color:white;">thresholdmann.py</a>  script. It will take the source MRI, and the thresholdmann.json control points file to produce the mask volume, as in <br /><code style="font-family: 'Share Tech Mono';line-height:2.1">python thresholdmann.py input_nifti controlpoints_file output_nifti</code>.<br />
         </p>
         
         <img style="max-width:700px;padding-top:30px;padding-bottom:3px;padding-right:25px;" src="https://raw.githubusercontent.com/neuroanatomy/thresholdmann/master/img/thresholdmann_fig1_dark.png" alt=""/>
