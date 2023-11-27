@@ -11,6 +11,9 @@ const globals = {
   values: null,
   interpolate: null,
   prevValue: null, // previous value of the threshold configured by the user
+  alpha: 0.5,
+  brightness: 1,
+  contrast: 1,
   selectedControlPoint: null,
   selectedTool: "Select",
   selectedDirection: "SelectUp",
@@ -230,15 +233,17 @@ const thresholdJob = () => {
 };
 
 const _setPixelFromValue = (px, ind, val, selectedOverlay) => {
-  const g = px.data[4*ind+0];
+  const {alpha} = globals;
+  const r = px.data[4*ind+0];
+  const mr = alpha*255 + (1-alpha) * px.data[4*ind+0];
   if(selectedOverlay === 'Threshold Mask') {
     if (globals.selectedDirection === "SelectUp") {
-      px.data[4*ind+0] = (g>=val)?255:g;
+      px.data[4*ind+0] = (r>=val)?mr:r;
     } else {
-      px.data[4*ind+0] = (g<=val)?255:g;
+      px.data[4*ind+0] = (r<=val)?mr:r;
     }
-    px.data[4*ind+1] = g;
-    px.data[4*ind+2] = g;
+    px.data[4*ind+1] = r;
+    px.data[4*ind+2] = r;
   } else {
     px.data[4*ind+0] = val|0;
     px.data[4*ind+1] = val|0;
@@ -781,4 +786,24 @@ const initWithPath = async (path) => {
   _newMRIViewer({path});
   await _display();
   initUI();
+};
+
+const changeAlpha = (ev) => {
+  const newAlpha = Number(ev.target.value)/100;
+  globals.alpha = newAlpha;
+  globals.mv.draw();
+};
+
+const changeBrightness = (ev) => {
+  const {brightness} = globals;
+  const contrast = Number(ev.target.value)/100;
+  globals.contrast = contrast;
+  document.querySelector('canvas.viewer').style.filter = `brightness(${brightness}) contrast(${contrast})`;
+};
+
+const changeContrast = (ev) => {
+  const brightness = Number(ev.target.value)/100;
+  const {contrast} = globals;
+  globals.brightness = brightness;
+  document.querySelector('canvas.viewer').style.filter = `brightness(${brightness}) contrast(${contrast})`;
 };
