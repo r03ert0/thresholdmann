@@ -778,6 +778,8 @@ const loadNifti = () => {
 };
 
 /** Handle initialisation when a path is provided.
+ * This function is called from
+ * the HTML page.
  * @param {string} path - the path to the Nifti file
  * @returns {void}
  */
@@ -788,12 +790,24 @@ const initWithPath = async (path) => {
   initUI();
 };
 
+/** Adjust transparency of the thresholding mask. This
+ * function is called from the HTML page.
+ * @param {Event} ev - the event
+ * @returns {void}
+ */
+// eslint-disable-next-line no-unused-vars
 const changeAlpha = (ev) => {
   const newAlpha = Number(ev.target.value)/100;
   globals.alpha = newAlpha;
   globals.mv.draw();
 };
 
+/** Adjust the brightness of the brain MRI. This
+ * function is called from the HTML page.
+ * @param {Event} ev - the event
+ * @returns {void}
+ */
+// eslint-disable-next-line no-unused-vars
 const changeBrightness = (ev) => {
   const {brightness} = globals;
   const contrast = Number(ev.target.value)/100;
@@ -801,6 +815,12 @@ const changeBrightness = (ev) => {
   document.querySelector('canvas.viewer').style.filter = `brightness(${brightness}) contrast(${contrast})`;
 };
 
+/** Adjust the contrast of the brain MRI. This
+ * function is called from the HTML page.
+ * @param {Event} ev - the event
+ * @returns {void}
+ */
+// eslint-disable-next-line no-unused-vars
 const changeContrast = (ev) => {
   const brightness = Number(ev.target.value)/100;
   const {contrast} = globals;
